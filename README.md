@@ -6,10 +6,17 @@ Online-Terminbuchung für Friseure, ähnlich wie Treatwell, aber für einen einz
 - Freie Termine werden mit den Outlook-Kalendern der Mitarbeiter:innen abgeglichen (ähnlich wie Calendly).
 - Gebucht wird verbindlich, bezahlt wird nur vor Ort.
 
+## Mitarbeit
+
+- **[AGENTS.md](AGENTS.md)**: Einstieg für KI-Assistenten und alle, die am Code arbeiten (Regeln, Struktur, Checkliste)
+- **[doku/architektur.md](doku/architektur.md)**: Aufbau der Testversion
+- **[doku/fachlogik.md](doku/fachlogik.md)**: Berechnung der freien Termine, bekannte Salondaten
+- **[doku/roadmap.md](doku/roadmap.md)**: Weg zur echten Version, offene Fragen an den Salon
+
 ## Testversion (GitHub Pages)
 
 `docs/` enthält eine eigenständige Version ohne Build-Schritt (HTML, CSS, JavaScript), die direkt über GitHub Pages läuft:
-**https://huberion.github.io/TreatBetter/**
+**https://huberion.github.io/TreatBetter/docs/** (nach dem Umstellen der Pages-Quelle auf `/docs` direkt unter https://huberion.github.io/TreatBetter/)
 
 - Kundenseite: Leistung wählen, Person und Uhrzeit wählen, als Gast buchen (Bezahlung nur vor Ort), Bestätigung mit Kalender-Download.
 - Verwaltung über das Menü oben rechts: Tageskalender, Öffnungszeiten & Regeln, Team & Outlook.
