@@ -18,7 +18,7 @@ Es gelten dieselben Regeln wie für `docs/` (siehe [AGENTS.md](../AGENTS.md)): k
 ## Vor dem Livegang
 
 - [ ] Gelb markierte Stellen in `impressum.html` und `datenschutz.html` mit dem Salon klären und ausfüllen (vollständiger Name, E-Mail, Gewerbebehörde, UID, Speicherdauer der Server-Protokolle). Datenschutz und Impressum am besten von der Wirtschaftskammer prüfen lassen.
-- [ ] Den Buchungslink (zweimal in `index.html`, Kommentar `BUCHUNGSLINK`) auf die echte Buchungsseite umstellen. Solange es die nicht gibt, Link entfernen oder auf Treatwell zeigen lassen.
+- [ ] Den Buchungslink (zweimal in `index.html`, Kommentar `BUCHUNGSLINK`) zeigt derzeit auf das Treatwell-Profil. Sobald die eigene Buchung läuft, dorthin umstellen und `datenschutz.html` anpassen.
 - [ ] `<meta name="robots" content="noindex, nofollow">` in allen drei Seiten entfernen, damit Google die Seite findet.
 
 ## Auf IONOS hochladen
