@@ -13,7 +13,7 @@ Wo das Projekt steht und was für eine echte Version nötig wäre. Die Vorschlä
 
 ## Offene Fragen an den Salon
 
-- [ ] **Kalender:** Andrea und Pamela nutzen den Kalender am Android-Handy. Wir gehen davon aus, dass die Termine im **Google-Konto** liegen (Entscheidung Oktober 2026). Bitte am Handy prüfen: Termin öffnen, bearbeiten, dort steht der Kalender. Steht eine @gmail.com-Adresse da, passt es. Steht „Samsung Calendar“, „Telefon“ oder „Mein Kalender“ da, liegen die Termine nur am Handy bzw. bei Samsung und müssen ins Google-Konto verschoben werden, sonst ist keine Anbindung möglich.
+- [ ] **Kalender:** Andrea und Pamela nutzen den Kalender am Android-Handy. Wir gehen davon aus, dass die Termine im **Google-Konto** liegen (Entscheidung Oktober 2026). Bitte am Handy prüfen: Termin öffnen, bearbeiten, dort steht der Kalender. Steht eine @gmail.com-Adresse da, passt es. Steht „Samsung Calendar“, „Telefon“ oder „Mein Kalender“ da, liegen die Termine nur am Handy bzw. bei Samsung und müssen ins Google-Konto verschoben werden, sonst ist keine Anbindung möglich. Empfohlen ist ein eigenes Google-Konto für den Salon, siehe [Empfohlener Aufbau](#empfohlener-aufbau-ein-google-konto-für-den-salon). Gibt es schon eine Gmail-Adresse des Salons, die man dafür nehmen kann?
 - [ ] **Arbeitszeiten:** Arbeiten beide immer zu den Öffnungszeiten, oder gibt es feste eigene Zeiten bzw. Pausen?
 - [ ] **Leistungen:** Welche sind die zweite Herren-Leistung und die drei weiteren Kinder-, Teenager- und Studenten-Leistungen? Wie lange dauern Pflanzenfarbe und Haarverlängerung, und sollen die überhaupt online buchbar sein?
 - [ ] **Wer macht was:** Bieten beide alle Leistungen an?
@@ -47,11 +47,53 @@ Entschieden im Oktober 2026: Das Team nutzt den Kalender am Android-Handy, die T
 - **Buchung eintragen:** `events.insert` im gewählten Kalender, mit eigener Event-ID aus der Buchungs-ID, damit doppelte Anfragen keinen doppelten Termin erzeugen. Der Termin erscheint sofort am Handy.
 - **Änderungen mitbekommen:** Push Notifications (`events.watch`, Webhook auf eine HTTPS-Adresse des Backends). Die Kanäle laufen ab und müssen regelmäßig erneuert werden; danach mit `syncToken` nur die Änderungen holen. Zusätzlich vor jeder Buchung frisch prüfen.
 - **Doppelbuchungen verhindern:** Beim Absenden die Zeit erneut gegen den Google Kalender und die Datenbank prüfen und die Buchung in einer Transaktion anlegen.
-- **Berechtigungen:** Jede Person verbindet einmal ihr Google-Konto (OAuth, Rechte etwa `calendar.events` und `calendar.readonly` bzw. enger, Zugriff „offline“ für einen Refresh-Token). Bei privaten Gmail-Konten gibt es keine zentrale Verwaltung wie bei Google Workspace.
-- **Google-Cloud-Projekt:** Für OAuth braucht es ein Projekt in der Google Cloud Console mit Zustimmungsbildschirm. Solange die App im Modus „Testing“ ist, laufen Refresh-Tokens nach 7 Tagen ab; für den Dauerbetrieb muss sie veröffentlicht werden, und Kalender-Rechte gelten als „sensibel“ und brauchen eine Prüfung durch Google. **Vor der Umsetzung prüfen**, wie aufwendig das für eine einzelne kleine App ist.
-- **Login für die Verwaltung:** Anmeldung mit dem Google-Konto des Teams liegt nahe, weil die Konten ohnehin verbunden werden.
+- **Berechtigungen:** Nur das Salon-Konto verbindet sich einmal per OAuth (Rechte etwa `calendar.events` und `calendar.readonly` bzw. enger, Zugriff „offline“ für einen Refresh-Token), siehe [Empfohlener Aufbau](#empfohlener-aufbau-ein-google-konto-für-den-salon). Andrea und Pamela verbinden nichts selbst.
+- **Google-Cloud-Projekt:** Für OAuth braucht es ein Projekt in der Google Cloud Console mit Zustimmungsbildschirm. Solange die App im Modus „Testing“ ist, laufen Refresh-Tokens nach 7 Tagen ab, für den Dauerbetrieb muss sie also veröffentlicht werden. Kalender-Rechte gelten als „sensibel“. Weil sich nur das eigene Konto des Salons anmeldet, reicht voraussichtlich eine veröffentlichte, nicht geprüfte App (beim Anmelden erscheint dann ein Warnhinweis). **Vor der Umsetzung prüfen.**
+- **Login für die Verwaltung:** Anmeldung mit Google liegt nahe. Wer in die Verwaltung darf, legt eine Liste erlaubter Adressen fest (Salon, Andrea, Pamela).
 - **Geheimnisse** (Client-Secret, Tokens) gehören in die Umgebung bzw. einen Secret-Speicher, nie ins Repository.
 - **Kosten:** Die Google Calendar API ist für diese Nutzung kostenlos.
+
+### Empfohlener Aufbau: ein Google-Konto für den Salon
+
+Statt dass jede Person ihr eigenes Google-Konto mit der Buchungsseite verbindet, gibt es **ein Google-Konto für den Salon**. Nur dieses ist mit der Buchungsseite verbunden.
+
+```
+Salon-Konto (z. B. eine neue Gmail-Adresse des Salons)
+ ├─ Kalender „Buchungen Andrea“   ← Buchungsseite trägt hier ein, Andrea sieht ihn am Handy
+ ├─ Kalender „Buchungen Pamela“   ← Buchungsseite trägt hier ein, Pamela sieht ihn am Handy
+ ├─ Andreas eigener Kalender      ← von Andrea freigegeben: nur frei/beschäftigt
+ └─ Pamelas eigener Kalender      ← von Pamela freigegeben: nur frei/beschäftigt
+```
+
+Belegt ist eine Person, wenn in ihrem Buchungskalender **oder** in ihrem eigenen Kalender etwas eingetragen ist. Das passt zu den Feldern „Belegt prüfen in“ und „Neue Buchungen eintragen in“ unter Verwaltung › Team & Kalender.
+
+**Warum so:**
+
+- **Nur eine Verbindung:** Der Salon meldet sich einmal an. Keine Anmeldung pro Person, weniger Aufwand mit der Prüfung durch Google.
+- **Datenschutz:** Mit der Freigabe „Nur frei/beschäftigt“ sieht das Salon-Konto technisch keine Inhalte der privaten Termine, nicht nur weil die Seite sie nicht abfragt.
+- **Sauber getrennt:** Online-Buchungen stehen in eigenen Kalendern, nicht zwischen privaten Terminen. Verlässt jemand den Salon, endet die Freigabe, die Buchungen bleiben beim Salon.
+
+**Nicht empfohlen:** ein einziger gemeinsamer Kalender für beide. Dann ließe sich nur über die Titel der Termine erkennen, wer belegt ist, und Titel liest die Seite nicht.
+
+**Einschränkung:** Bei der Freigabe „Nur frei/beschäftigt“ liefert Google aus den eigenen Kalendern nur belegte Zeiträume (`freeBusy.query`), ohne Unterscheidung nach Abwesend, „Vielleicht“ oder ganztägig. Die Einstellung „Was blockiert einen Termin?“ wirkt dann nur auf die Buchungskalender. Termine, die als „Verfügbar“ markiert sind, zählen als frei. Das betrifft vor allem **ganztägige Termine wie Urlaub, die in Google standardmäßig „Verfügbar“ sind**: Urlaub bitte als „Beschäftigt“ eintragen, sonst ist man online buchbar. Alternative wäre die Freigabe „Alle Termindetails anzeigen“, dann sieht das Salon-Konto aber auch die Inhalte.
+
+#### Anleitung zum Einrichten
+
+Die Freigabe-Einstellungen gibt es nur im Browser unter calendar.google.com, nicht in der Handy-App.
+
+**Salon (einmalig):**
+
+1. Ein Google-Konto für den Salon anlegen (oder ein vorhandenes nutzen, das nur der Salon verwendet).
+2. In calendar.google.com links bei „Weitere Kalender“ auf **+** → **Neuen Kalender erstellen**: „Buchungen Andrea“. Dasselbe für „Buchungen Pamela“.
+3. Beim Kalender „Buchungen Andrea“ auf die drei Punkte → **Einstellungen und Freigabe** → **Für bestimmte Personen oder Gruppen freigeben** → Andreas Gmail-Adresse eintragen, Berechtigung **„Änderungen an Terminen vornehmen“**. Dasselbe für Pamela mit „Buchungen Pamela“.
+
+**Andrea und Pamela (jeweils einmalig):**
+
+4. Die Einladungs-E-Mail des Salons öffnen und den Kalender hinzufügen.
+5. In calendar.google.com beim eigenen Kalender auf die drei Punkte → **Einstellungen und Freigabe** → **Für bestimmte Personen oder Gruppen freigeben** → die Adresse des Salon-Kontos eintragen, Berechtigung **„Nur Verfügbarkeit anzeigen (Details ausblenden)“**.
+6. Am Handy in der Kalender-App unter Einstellungen prüfen, dass „Buchungen Andrea“ bzw. „Buchungen Pamela“ angezeigt und synchronisiert wird. In der Google-Kalender-App geht das meist von selbst, in der Samsung-Kalender-App muss man den Kalender eventuell einschalten.
+
+**Zum Schluss** verbindet der Salon in der Verwaltung der Buchungsseite einmal sein Google-Konto (kommt mit der echten Version).
 
 **Nicht geeignet:** einen Kalender nur über einen ICS-Link abonnieren. Das geht nur in eine Richtung und mit Verzögerung (bei Google teils Stunden), Doppelbuchungen wären die Folge.
 

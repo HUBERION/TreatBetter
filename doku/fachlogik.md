@@ -57,6 +57,8 @@ Die Schlüssel stammen noch aus der Outlook-Planung (`elsewhere` hieß „An and
 
 **Achtung:** Ganztägige Termine sind in Google standardmäßig „Verfügbar“. Damit Urlaub trotzdem blockiert, wertet die Seite ganztägige Termine eigens aus (`allDay`).
 
+Im [empfohlenen Aufbau mit einem Salon-Konto](roadmap.md#empfohlener-aufbau-ein-google-konto-für-den-salon) geben Andrea und Pamela ihre eigenen Kalender nur als „frei/beschäftigt“ frei. Für diese Kalender gibt es dann nur „belegt“ ohne Art, die Tabelle oben gilt nur für die Buchungskalender des Salons. Urlaub muss dort als „Beschäftigt“ eingetragen sein.
+
 Über die Seite gebuchte Termine (`kind: 'booking'`) blockieren immer.
 
 ## Buchung, Storno, Anwesenheit
