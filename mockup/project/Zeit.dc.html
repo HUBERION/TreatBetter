@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Termin wählen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#6A2C70}a:hover{color:#4E1F53}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #18161D; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; display: flex; flex-direction: column">
+  <div role="note" style="height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFF1DB; color: #6B4A10; font-size: 12px; font-weight: 700">Entwurf · Testversion, es wird nichts gebucht</div>
+  <header style="height: 56px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid #ECE9EF">
+    <a href="Main.dc.html" aria-label="Zurück zur Salon-Seite" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #18161D">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 18px; font-weight: 700">Termin wählen</h1>
+  </header>
+
+  <div style="padding: 14px 20px 0; flex-shrink: 0">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #F7F5F8; border-radius: 12px">
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <span style="font-size: 15px; font-weight: 700">Herren – Trockenhaarschnitt</span>
+        <span style="font-size: 13px; color: #5E5A66">20 Min. · Bezahlung vor Ort</span>
+      </div>
+      <span style="font-size: 16px; font-weight: 800">27 €</span>
+    </div>
+  </div>
+
+  <div style="padding: 16px 20px 0; flex-shrink: 0">
+    <h2 style="margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #3D3944">Bei wem?</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{staff}}" as="p" hint-placeholder-count="3">
+        <button type="button" onClick="{{p.pick}}" aria-pressed="{{p.active}}" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; border: 1.5px solid {{p.bd}}; background: {{p.bg}}; border-radius: 12px; font-family: inherit; color: #18161D; cursor: pointer">
+          <span style="width: 40px; height: 40px; border-radius: 999px; background: {{p.avatarBg}}; color: {{p.avatarFg}}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800">
+            <sc-if value="{{p.isAny}}" hint-placeholder-val="{{false}}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M15.5 14.4c2.4.2 4.1 1.8 4.6 4.1"></path></svg>
+            </sc-if>
+            <sc-if value="{{p.notAny}}" hint-placeholder-val="{{true}}">{{p.initial}}</sc-if>
+          </span>
+          <span style="font-size: 13px; font-weight: {{p.weight}}">{{p.name}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding: 16px 12px 2px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0">
+    <span style="font-size: 16px; font-weight: 700">Oktober 2026</span>
+    <div style="display: flex; gap: 2px">
+      <button type="button" aria-label="Vorherige Woche" disabled="{{true}}" style="width: 44px; height: 44px; border: 0; background: none; color: #B5B0BB; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <button type="button" aria-label="Nächste Woche" style="width: 44px; height: 44px; border: 0; background: none; color: #18161D; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 12px; flex-shrink: 0">
+    <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+      <button type="button" onClick="{{d.pick}}" disabled="{{d.closed}}" aria-label="{{d.aria}}" aria-pressed="{{d.active}}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0 6px; background: none; border: 0; font-family: inherit; color: {{d.fg}}; cursor: pointer">
+        <span style="font-size: 12px; font-weight: 600; color: {{d.dowFg}}">{{d.dow}}</span>
+        <span style="width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; background: {{d.bg}}; text-decoration: {{d.deco}}">{{d.num}}</span>
+        <span style="width: 5px; height: 5px; border-radius: 999px; background: {{d.dot}}"></span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="margin: 6px 20px 0; padding: 10px 0; border-top: 1px solid #ECE9EF; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5E5A66; flex-shrink: 0">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"></path><path d="M20 20v-4h-4"></path></svg>
+    <span>{{dayLabel}} · live mit Outlook abgeglichen</span>
+  </div>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 24px">
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+      <div style="margin-top: 12px">
+        <h3 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #5E5A66">{{g.label}} <span style="font-weight: 500">· {{g.count}} frei</span></h3>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{g.slots}}" as="s" hint-placeholder-count="8">
+            <a href="Buchen.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #DCD7E0; border-radius: 10px; font-size: 15px; font-weight: 600; color: #18161D; text-decoration: none">{{s.time}}</a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+      <div style="margin-top: 16px; padding: 20px; border-radius: 12px; background: #F7F5F8; display: flex; flex-direction: column; gap: 14px; align-items: flex-start">
+        <span style="font-size: 15px; line-height: 1.4; font-weight: 600">{{emptyText}}</span>
+        <sc-if value="{{hasNext}}" hint-placeholder-val="{{true}}">
+          <button type="button" onClick="{{pickNext}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 0; background: #6A2C70; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Nächster freier Tag: {{nextLabel}}</button>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const staffSel = st.staff || 'any';
+    const dayIdx = st.day == null ? 0 : st.day;
+    const toMin = (s) => { const p = s.split(':'); return Number(p[0]) * 60 + Number(p[1]); };
+    const fmt = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+    const DAYS = [
+      { dow: 'Di', num: 13, long: 'Dienstag, 13. Oktober', short: 'Di, 13. Okt', wd: 2 },
+      { dow: 'Mi', num: 14, long: 'Mittwoch, 14. Oktober', short: 'Mi, 14. Okt', wd: 3 },
+      { dow: 'Do', num: 15, long: 'Donnerstag, 15. Oktober', short: 'Do, 15. Okt', wd: 4 },
+      { dow: 'Fr', num: 16, long: 'Freitag, 16. Oktober', short: 'Fr, 16. Okt', wd: 5 },
+      { dow: 'Sa', num: 17, long: 'Samstag, 17. Oktober', short: 'Sa, 17. Okt', wd: 6 },
+      { dow: 'So', num: 18, long: 'Sonntag, 18. Oktober', short: 'So, 18. Okt', wd: 0 },
+      { dow: 'Mo', num: 19, long: 'Montag, 19. Oktober', short: 'Mo, 19. Okt', wd: 1 },
+    ];
+    // Öffnungszeiten des Salons: der Rahmen
+    const OPEN = { 1: ['08:30', '13:30'], 2: ['08:30', '19:00'], 3: ['08:30', '13:30'], 4: ['08:30', '19:00'], 5: ['07:30', '20:00'] };
+    const STAFF = [
+      { id: 'andrea', name: 'Andrea', initial: 'A', avatarBg: '#EBDDEE', avatarFg: '#4E1F53', work: OPEN },
+      { id: 'pamela', name: 'Pamela', initial: 'P', avatarBg: '#DCEBE3', avatarFg: '#17573A', work: OPEN },
+    ];
+    // Belegte Zeiten aus Outlook (inkl. bereits gebuchter Termine), je Tag – Beispieldaten
+    const BUSY = {
+      andrea: [
+        ['08:30-08:55', '09:00-09:25', '10:00-11:30', '12:00-12:45', '13:30-13:50', '15:00-16:30', '17:30-18:00'],
+        ['08:30-10:00', '12:00-12:30'],
+        ['09:00-10:00', '12:00-12:45', '14:00-19:00'],
+        ['07:30-20:00'],
+        [], [],
+        ['08:30-09:30', '11:00-11:45'],
+      ],
+      pamela: [
+        ['09:00-09:30', '10:15-11:00', '12:30-13:00', '14:00-14:20', '16:00-19:00'],
+        ['08:30-10:00', '11:30-12:00'],
+        ['10:00-11:30', '15:00-16:00'],
+        ['07:30-09:00', '12:00-12:45', '17:00-18:30'],
+        [], [],
+        ['08:30-09:00', '11:00-12:30'],
+      ],
+    };
+    const NOW = { day: 0, min: toMin('11:52') };
+    const RULES = { step: 15, duration: 20, buffer: 5, lead: 30 };
+
+    const slotsFor = (sid, d) => {
+      const day = DAYS[d];
+      const person = STAFF.find((x) => x.id === sid);
+      const open = OPEN[day.wd];
+      const work = person.work[day.wd];
+      if (!open || !work) return [];
+      const start = Math.max(toMin(open[0]), toMin(work[0]));
+      const end = Math.min(toMin(open[1]), toMin(work[1]));
+      const busy = BUSY[sid][d].map((r) => r.split('-').map(toMin));
+      const out = [];
+      for (let t = start; t + RULES.duration <= end; t += RULES.step) {
+        if (d === NOW.day && t < NOW.min + RULES.lead) continue;
+        const clash = busy.some(([b0, b1]) => t < b1 + RULES.buffer && t + RULES.duration + RULES.buffer > b0);
+        if (!clash) out.push(t);
+      }
+      return out;
+    };
+    const slotsForSel = (d) => {
+      const ids = staffSel === 'any' ? STAFF.map((s) => s.id) : [staffSel];
+      const set = new Set();
+      ids.forEach((id) => slotsFor(id, d).forEach((t) => set.add(t)));
+      return Array.from(set).sort((a, b) => a - b);
+    };
+
+    const people = [{ id: 'any', name: 'Beliebig' }].concat(STAFF);
+    const staff = people.map((p) => {
+      const active = p.id === staffSel;
+      return {
+        name: p.name,
+        initial: p.initial || '',
+        isAny: p.id === 'any',
+        notAny: p.id !== 'any',
+        avatarBg: p.avatarBg || '#ECE9EF',
+        avatarFg: p.avatarFg || '#3D3944',
+        active,
+        bd: active ? '#6A2C70' : '#E3DFE7',
+        bg: active ? '#F7EFF8' : '#FFFFFF',
+        weight: active ? 700 : 500,
+        pick: () => this.setState({ staff: p.id }),
+      };
+    });
+
+    const days = DAYS.map((d, i) => {
+      const closed = !OPEN[d.wd];
+      const count = closed ? 0 : slotsForSel(i).length;
+      const active = i === dayIdx;
+      return {
+        dow: d.dow,
+        num: d.num,
+        closed,
+        active,
+        aria: d.long + (closed ? ', geschlossen' : count ? ', ' + count + ' freie Termine' : ', ausgebucht'),
+        bg: active ? '#6A2C70' : 'transparent',
+        fg: active ? '#FFFFFF' : closed ? '#9A95A1' : count ? '#18161D' : '#6E6A76',
+        dowFg: closed ? '#9A95A1' : '#5E5A66',
+        deco: closed ? 'line-through' : 'none',
+        dot: !closed && count ? '#1F7A4D' : 'transparent',
+        pick: () => this.setState({ day: i }),
+      };
+    });
+
+    const slots = slotsForSel(dayIdx);
+    const bands = [['Vormittag', 0, 720], ['Nachmittag', 720, 1020], ['Abend', 1020, 1440]];
+    const groups = bands.map(([label, a, b]) => {
+      const list = slots.filter((t) => t >= a && t < b).map((t) => ({ time: fmt(t) }));
+      return { label, count: list.length, slots: list };
+    }).filter((g) => g.count > 0);
+
+    let next = -1;
+    for (let i = dayIdx + 1; i < DAYS.length; i++) {
+      if (OPEN[DAYS[i].wd] && slotsForSel(i).length) { next = i; break; }
+    }
+    const who = staffSel === 'any' ? '' : ' bei ' + STAFF.find((s) => s.id === staffSel).name;
+
+    return {
+      staff,
+      days,
+      groups,
+      dayLabel: DAYS[dayIdx].long,
+      empty: slots.length === 0,
+      emptyText: 'Am ' + DAYS[dayIdx].long + who + ' ist leider nichts mehr frei.',
+      hasNext: next >= 0,
+      nextLabel: next >= 0 ? DAYS[next].short : '',
+      pickNext: () => { if (next >= 0) this.setState({ day: next }); },
+    };
+  }
+}
+</script>
+</body>
+</html>

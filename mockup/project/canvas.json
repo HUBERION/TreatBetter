@@ -1,0 +1,42 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-13T09:56:00Z" },
+  "title": "Friseur Andrea Zechmeister · Online-Buchung (Entwurf)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "1 · Salon & Leistungen", "is_interactive": true },
+    "Zeit.dc.html": { "x": 470, "y": 0, "w": 390, "h": 844, "title": "2 · Termin wählen", "is_interactive": true },
+    "Buchen.dc.html": { "x": 940, "y": 0, "w": 390, "h": 844, "title": "3 · Daten & Bezahlung vor Ort", "is_interactive": true },
+    "Bestaetigt.dc.html": { "x": 1410, "y": 0, "w": 390, "h": 844, "title": "4 · Bestätigung", "is_interactive": true },
+    "Admin-Kalender.dc.html": { "x": 0, "y": 1300, "w": 1280, "h": 1150, "title": "Verwaltung · Tageskalender", "expand": "fill", "is_interactive": true },
+    "Admin-Oeffnungszeiten.dc.html": { "x": 1360, "y": 1300, "w": 1280, "h": 1120, "title": "Verwaltung · Öffnungszeiten & Regeln", "expand": "fill", "is_interactive": true },
+    "Admin-Team.dc.html": { "x": 2720, "y": 1300, "w": 1280, "h": 1160, "title": "Verwaltung · Team & Outlook", "expand": "fill", "is_interactive": true }
+  },
+  "order": [
+    "Main.dc.html",
+    "Zeit.dc.html",
+    "Buchen.dc.html",
+    "Bestaetigt.dc.html",
+    "Admin-Kalender.dc.html",
+    "Admin-Oeffnungszeiten.dc.html",
+    "Admin-Team.dc.html"
+  ],
+  "notes": {
+    "titleKunden": { "x": 0, "y": -300, "text": "Online-Buchung für Kund:innen", "kind": "title1", "maxW": 1800 },
+    "titleAdmin": { "x": 0, "y": 1000, "text": "Salon-Verwaltung", "kind": "title1", "maxW": 4000 },
+    "logik": {
+      "x": 1880, "y": 0, "w": 400, "size": "m", "fill": "purple",
+      "text": "Freie Termine =\nÖffnungszeiten\n∩ Arbeitszeit der Person\n− belegte Zeiten aus Outlook\n− 5 Min. Puffer\n− 30 Min. Vorlaufzeit\n\nBezahlt wird nur vor Ort. Es gibt keine Online-Zahlung und keinen Zahlungsanbieter."
+    },
+    "testen": {
+      "x": 2360, "y": 0, "w": 380, "size": "m", "fill": "orange",
+      "text": "So testest du:\n1. Artboard „1 · Salon & Leistungen“ öffnen und auf Play klicken\n2. Leistung auswählen, Termin wählen, buchen\n3. Oben rechts im Menü geht es zur Salon-Verwaltung\n\nAlles sind Beispieldaten, es wird nichts gebucht und nichts gespeichert."
+    },
+    "technik": {
+      "x": 4080, "y": 1300, "w": 420, "size": "m", "fill": "teal",
+      "text": "Outlook-Abgleich (Idee):\n• Microsoft Graph getSchedule liefert nur frei/belegt, keine Inhalte\n• Änderungen kommen per Webhook (Change Notifications)\n• Jede Buchung wird als Termin in den Outlook-Kalender der Person geschrieben und blockiert dort sofort"
+    }
+  },
+  "designSystems": []
+}

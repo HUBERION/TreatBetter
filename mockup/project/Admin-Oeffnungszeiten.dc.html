@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Verwaltung – Öffnungszeiten</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#6A2C70}a:hover{color:#4E1F53}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #F7F5F8; color: #18161D; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; display: flex; flex-direction: column">
+  <div role="note" style="min-height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 4px 16px; box-sizing: border-box; background: #FFF1DB; color: #6B4A10; font-size: 13px; font-weight: 700; text-align: center">Entwurf mit Beispieldaten · Änderungen werden nicht gespeichert</div>
+  <div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+  <nav aria-label="Verwaltung" style="flex: 1 1 220px; box-sizing: border-box; background: #FFFFFF; border-right: 1px solid #ECE9EF; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px">
+      <div style="width: 34px; height: 34px; border-radius: 999px; background: #6A2C70; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; flex-shrink: 0">AZ</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-size: 15px; line-height: 1.3; font-weight: 700">Friseur Andrea Zechmeister</span>
+        <span style="font-size: 12px; color: #5E5A66">Verwaltung</span>
+      </div>
+    </div>
+    <a href="Admin-Kalender.dc.html" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: #3D3944">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+      Kalender
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: #3D3944">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"></path></svg>
+      Buchungen
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: #3D3944">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"></circle><circle cx="6" cy="18" r="2.5"></circle><path d="M8 7.5L20 18M8 16.5L20 6"></path></svg>
+      Leistungen
+    </a>
+    <a href="Admin-Team.dc.html" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: #3D3944">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M15.5 14.4c2.4.2 4.1 1.8 4.6 4.1"></path></svg>
+      Team &amp; Outlook
+    </a>
+    <a href="Admin-Oeffnungszeiten.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 700; background: #F3EAF4; color: #4E1F53">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      Öffnungszeiten
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 600; color: #3D3944">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+      Einstellungen
+    </a>
+    <a href="Main.dc.html" style="margin-top: 16px; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #E3DFE7; text-decoration: none; font-size: 14px; font-weight: 600; color: #6A2C70">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>
+      Buchungsseite ansehen
+    </a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 16px">
+      <div style="margin-right: auto; display: flex; flex-direction: column; gap: 6px; max-width: 640px">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em">Öffnungszeiten &amp; Buchungsregeln</h1>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #4A4652">Das ist der Rahmen für alle Online-Termine. Angeboten wird nur, was zusätzlich im Outlook-Kalender der jeweiligen Person frei ist.</p>
+      </div>
+      <button type="button" style="height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: #6A2C70; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Änderungen speichern</button>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section style="flex: 1 1 460px; min-width: 0; background: #FFFFFF; border: 1px solid #ECE9EF; border-radius: 14px; padding: 20px 22px 12px; display: flex; flex-direction: column">
+        <h2 style="margin: 0 0 4px; font-size: 17px; font-weight: 700">Reguläre Öffnungszeiten</h2>
+        <p style="margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #5E5A66">Gilt für den ganzen Salon. Eigene Arbeitszeiten pro Person legst du unter <a href="Admin-Team.dc.html">Team &amp; Outlook</a> fest.</p>
+        <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+          <div style="display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; min-height: 60px; padding: 6px 0; border-top: 1px solid #ECE9EF">
+            <button type="button" role="switch" aria-checked="{{d.open}}" aria-label="{{d.name}} geöffnet" onClick="{{d.toggle}}" style="width: 52px; height: 44px; padding: 0; border: 0; background: none; display: flex; align-items: center; cursor: pointer; flex-shrink: 0">
+              <span style="position: relative; width: 46px; height: 26px; border-radius: 999px; background: {{d.trackBg}}">
+                <span style="position: absolute; top: 3px; left: {{d.knobX}}px; width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(24, 22, 29, 0.25)"></span>
+              </span>
+            </button>
+            <span style="width: 96px; font-size: 15px; font-weight: 600">{{d.name}}</span>
+            <sc-if value="{{d.open}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                <input type="time" aria-label="{{d.name}} von" value="{{d.from}}" onChange="{{d.setFrom}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF">
+                <span style="color: #5E5A66">–</span>
+                <input type="time" aria-label="{{d.name}} bis" value="{{d.to}}" onChange="{{d.setTo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF">
+                <button type="button" style="height: 40px; padding: 0 10px; border: 0; background: none; color: #6A2C70; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">+ Pause</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{d.closed}}" hint-placeholder-val="{{false}}">
+              <span style="font-size: 14px; color: #5E5A66">Geschlossen</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <section style="background: #FFFFFF; border: 1px solid #ECE9EF; border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+            <h2 style="margin: 0; font-size: 17px; font-weight: 700">Ausnahmen &amp; Feiertage</h2>
+            <button type="button" style="height: 40px; padding: 0 12px; border: 1px solid #DCD7E0; background: #FFFFFF; border-radius: 10px; color: #18161D; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">+ Ausnahme</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <button type="button" role="switch" aria-checked="{{autoOn}}" aria-label="Österreichische Feiertage automatisch schließen" onClick="{{toggleAuto}}" style="width: 52px; height: 44px; padding: 0; border: 0; background: none; display: flex; align-items: center; cursor: pointer; flex-shrink: 0">
+              <span style="position: relative; width: 46px; height: 26px; border-radius: 999px; background: {{autoTrackBg}}">
+                <span style="position: absolute; top: 3px; left: {{autoKnobX}}px; width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(24, 22, 29, 0.25)"></span>
+              </span>
+            </button>
+            <span style="font-size: 14px; line-height: 1.4">Österreichische Feiertage automatisch schließen</span>
+          </div>
+          <div style="display: flex; flex-direction: column">
+            <sc-if value="{{autoOn}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #ECE9EF">
+                <span style="width: 92px; font-size: 14px; font-weight: 700">Mo, 26. Okt</span>
+                <span style="flex: 1; min-width: 0; font-size: 14px">Nationalfeiertag <span style="color: #5E5A66">· automatisch</span></span>
+                <span style="padding: 3px 10px; border-radius: 999px; background: #F3EEF4; color: #4E1F53; font-size: 12px; font-weight: 700">Geschlossen</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #ECE9EF">
+                <span style="width: 92px; font-size: 14px; font-weight: 700">Di, 8. Dez</span>
+                <span style="flex: 1; min-width: 0; font-size: 14px">Mariä Empfängnis <span style="color: #5E5A66">· automatisch</span></span>
+                <span style="padding: 3px 10px; border-radius: 999px; background: #F3EEF4; color: #4E1F53; font-size: 12px; font-weight: 700">Geschlossen</span>
+              </div>
+            </sc-if>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #ECE9EF">
+              <span style="width: 92px; font-size: 14px; font-weight: 700">Do, 24. Dez</span>
+              <span style="flex: 1; min-width: 0; font-size: 14px">Heiliger Abend <span style="color: #5E5A66">· manuell</span></span>
+              <span style="padding: 3px 10px; border-radius: 999px; background: #E5F3EC; color: #17573A; font-size: 12px; font-weight: 700">08:30–12:00</span>
+            </div>
+            <sc-if value="{{autoOn}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #ECE9EF">
+                <span style="width: 92px; font-size: 14px; font-weight: 700">Fr, 25. Dez</span>
+                <span style="flex: 1; min-width: 0; font-size: 14px">Christtag <span style="color: #5E5A66">· automatisch</span></span>
+                <span style="padding: 3px 10px; border-radius: 999px; background: #F3EEF4; color: #4E1F53; font-size: 12px; font-weight: 700">Geschlossen</span>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+        <section style="background: #FFFFFF; border: 1px solid #ECE9EF; border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 700">Buchungsregeln</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px">
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="raster" style="font-size: 13px; font-weight: 600; color: #3D3944">Startzeiten im Raster</label>
+              <select id="raster" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>alle 15 Min.</option><option>alle 10 Min.</option><option>alle 30 Min.</option></select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="puffer" style="font-size: 13px; font-weight: 600; color: #3D3944">Puffer nach jedem Termin</label>
+              <select id="puffer" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>5 Min.</option><option>kein Puffer</option><option>10 Min.</option><option>15 Min.</option></select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="vorlauf" style="font-size: 13px; font-weight: 600; color: #3D3944">Frühestens buchbar</label>
+              <select id="vorlauf" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>30 Min. vorher</option><option>1 Std. vorher</option><option>2 Std. vorher</option><option>1 Tag vorher</option></select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="horizont" style="font-size: 13px; font-weight: 600; color: #3D3944">Buchbar bis</label>
+              <select id="horizont" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>8 Wochen im Voraus</option><option>4 Wochen im Voraus</option><option>12 Wochen im Voraus</option></select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="storno" style="font-size: 13px; font-weight: 600; color: #3D3944">Online stornierbar bis</label>
+              <select id="storno" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>24 Std. vorher</option><option>12 Std. vorher</option><option>48 Std. vorher</option></select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="erinnerung" style="font-size: 13px; font-weight: 600; color: #3D3944">Erinnerung an Kund:innen</label>
+              <select id="erinnerung" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>E-Mail 24 Std. vorher</option><option>E-Mail + SMS 24 Std. vorher</option><option>keine</option></select>
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="noshow" style="font-size: 13px; font-weight: 600; color: #3D3944">Wer nicht erscheint</label>
+              <select id="noshow" style="height: 42px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFC9D4; border-radius: 9px; font-family: inherit; font-size: 14px; color: #18161D; background: #FFFFFF"><option>nach 2× nicht erschienen nur noch telefonisch buchbar</option><option>keine Einschränkung</option></select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: #F7F5F8; border: 1px solid #E3DFE7">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E1F53" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 14px; font-weight: 700">Bezahlung: nur vor Ort</span>
+              <span style="font-size: 13px; line-height: 1.5; color: #4A4652">Bar oder mit Karte im Salon. Online-Zahlung ist nicht vorgesehen, Kund:innen geben keine Zahlungsdaten ein.</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const base = [
+      { name: 'Montag', from: '08:30', to: '13:30', open: true },
+      { name: 'Dienstag', from: '08:30', to: '19:00', open: true },
+      { name: 'Mittwoch', from: '08:30', to: '13:30', open: true },
+      { name: 'Donnerstag', from: '08:30', to: '19:00', open: true },
+      { name: 'Freitag', from: '07:30', to: '20:00', open: true },
+      { name: 'Samstag', from: '08:30', to: '13:00', open: false },
+      { name: 'Sonntag', from: '08:30', to: '13:00', open: false },
+    ];
+    const overrides = st.days || {};
+    const setDay = (i, patch) => {
+      const cur = (this.state && this.state.days) || {};
+      this.setState({ days: Object.assign({}, cur, { [i]: Object.assign({}, cur[i] || {}, patch) }) });
+    };
+    const days = base.map((d, i) => {
+      const cur = Object.assign({}, d, overrides[i] || {});
+      return {
+        name: cur.name,
+        from: cur.from,
+        to: cur.to,
+        open: cur.open,
+        closed: !cur.open,
+        trackBg: cur.open ? '#6A2C70' : '#CFC9D4',
+        knobX: cur.open ? 23 : 3,
+        toggle: () => setDay(i, { open: !cur.open }),
+        setFrom: (e) => setDay(i, { from: e.target.value }),
+        setTo: (e) => setDay(i, { to: e.target.value }),
+      };
+    });
+    const autoOn = st.autoHolidays !== false;
+    return {
+      days,
+      autoOn,
+      autoTrackBg: autoOn ? '#6A2C70' : '#CFC9D4',
+      autoKnobX: autoOn ? 23 : 3,
+      toggleAuto: () => this.setState({ autoHolidays: !autoOn }),
+    };
+  }
+}
+</script>
+</body>
+</html>
