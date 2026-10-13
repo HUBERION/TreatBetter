@@ -7,7 +7,7 @@ Diese Datei ist der Einstieg für KI-Coding-Assistenten (Claude Code, Codex, Cur
 **TreatBetter** ist eine Online-Terminbuchung für einen einzelnen Friseursalon, ähnlich wie Treatwell, aber eigenständig und ohne Marktplatz:
 
 - Der Salon pflegt **allgemeine Öffnungszeiten**.
-- Freie Termine entstehen erst durch **Abgleich mit den Outlook-Kalendern** der Mitarbeiter:innen (Prinzip wie Calendly).
+- Freie Termine entstehen erst durch **Abgleich mit den Google Kalendern** der Mitarbeiter:innen (Prinzip wie Calendly). Das Team nutzt den Kalender am Android-Handy; ursprünglich war Outlook geplant, seit Oktober 2026 gilt Google Kalender.
 - Gebucht wird verbindlich, **bezahlt wird ausschließlich vor Ort** (bar oder Karte). Online-Zahlung ist bewusst nicht vorgesehen.
 
 Erster Salon: **Friseur Andrea Zechmeister**, August-Jaksch-Straße 1, 9020 Klagenfurt. Team: Andrea (Friseurmeisterin, Inhaberin) und Pamela (Friseurin).
@@ -41,7 +41,7 @@ Dann http://localhost:8137 öffnen. Jeder andere statische Webserver geht genaus
 Die Testversion hat zwei Bereiche:
 
 - **Kundenseite** (`#/`): Leistung wählen, Person und Tag wählen, Uhrzeit wählen, als Gast buchen, Bestätigung mit `.ics`-Download.
-- **Verwaltung** (`#/verwaltung`, erreichbar über das Menü oben rechts): Tageskalender, Öffnungszeiten & Buchungsregeln, Team & Outlook.
+- **Verwaltung** (`#/verwaltung`, erreichbar über das Menü oben rechts): Tageskalender, Öffnungszeiten & Buchungsregeln, Team & Kalender.
 
 ## Projektstruktur
 
@@ -52,7 +52,7 @@ Die Testversion hat zwei Bereiche:
 ├── README.md              ← Überblick für Menschen
 ├── doku/
 │   ├── architektur.md     ← Aufbau von docs/app.js, Zustand, Routing, Erweitern
-│   ├── fachlogik.md       ← freie Termine, Öffnungszeiten, Feiertage, Outlook-Status, Salondaten
+│   ├── fachlogik.md       ← freie Termine, Öffnungszeiten, Feiertage, Google-Kalender-Termine, Salondaten
 │   └── roadmap.md         ← Weg zur echten Version, offene Fragen an den Salon
 ├── docs/                  ← Testversion, wird von GitHub Pages ausgeliefert
 │   ├── index.html         ← Gerüst, lädt style.css und app.js
@@ -69,7 +69,7 @@ Die Testversion hat zwei Bereiche:
 1. **Sprache:** Oberfläche auf Deutsch (Österreich). Kund:innen werden geduzt. Gegendert wird mit Doppelpunkt („Kund:innen“). Code-Kommentare auf Deutsch, Bezeichner im Stil des bestehenden Codes.
 2. **Kein Build, keine Abhängigkeiten** in `docs/`, solange das Team nichts anderes entscheidet. Keine CDNs, keine Google Fonts, keine Tracker oder Analytics (DSGVO).
 3. **Nur Bezahlung vor Ort.** Keine Payment-Anbieter, keine Felder für Zahlungsdaten.
-4. **Outlook-Datenschutz:** Es zählt nur „frei“ oder „belegt“. Betreff, Ort, Teilnehmer oder Inhalte von Outlook-Terminen nie anzeigen oder speichern.
+4. **Kalender-Datenschutz:** Es zählt nur „frei“ oder „belegt“. Titel, Ort, Teilnehmer oder Inhalte von Terminen im Google Kalender nie abfragen, anzeigen oder speichern.
 5. **Als Entwurf erkennbar lassen:** Das gelbe Band und `<meta name="robots" content="noindex, nofollow">` bleiben, solange keine echten Buchungen möglich sind. Die Seite ist öffentlich erreichbar.
 6. **Benutzereingaben escapen:** Alles, was aus Eingaben oder dem Speicher kommt, mit `esc()` in HTML einsetzen. Die Ansichten werden per `innerHTML` aufgebaut.
 7. **Barrierefreiheit:** echte `<button>` und `<a>`, Labels an Feldern, `aria-pressed` bzw. `role="switch"` mit `aria-checked`, Klickflächen mindestens 44 px, keine Information nur über Farbe.
@@ -99,4 +99,4 @@ Es gibt keine automatischen Tests. Diese Punkte bitte im Browser durchgehen:
 
 - [`doku/architektur.md`](doku/architektur.md): wie `app.js` aufgebaut ist und wie man Ansichten, Aktionen, Leistungen oder Beispieltermine ergänzt
 - [`doku/fachlogik.md`](doku/fachlogik.md): wie freie Termine berechnet werden, plus alle bekannten Salondaten
-- [`doku/roadmap.md`](doku/roadmap.md): Weg zur echten Version mit Outlook-Anbindung, offene Fragen an den Salon
+- [`doku/roadmap.md`](doku/roadmap.md): Weg zur echten Version mit Google-Kalender-Anbindung, Kosten für SMS/WhatsApp, offene Fragen an den Salon

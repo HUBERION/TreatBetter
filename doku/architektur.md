@@ -46,7 +46,7 @@ Die Datei ist in Abschnitte gegliedert, jeweils mit einem Kommentar `/* --------
 | `hours` | Öffnungszeiten je Wochentag, Schlüssel wie `Date.getDay()` (0 = Sonntag): `{ open, from, to }` | freie Termine, Salon-Seite |
 | `rules` | `step`, `buffer`, `lead` (Minuten), `weeks` (Buchungshorizont), `storno` (Stunden), `reminder`, `noshow` | `step`, `buffer`, `lead`, `weeks`, `storno` wirken; `reminder` und `noshow` werden nur gespeichert |
 | `autoHolidays` | Feiertage automatisch schließen | freie Termine, Ausnahmenliste |
-| `blockers` | Welche Outlook-Status blockieren: `busy`, `oof`, `tentative`, `elsewhere`, `allDay` | freie Termine, Tageskalender |
+| `blockers` | Welche Arten von Google-Kalender-Terminen blockieren (siehe [fachlogik.md](fachlogik.md#termine-aus-dem-google-kalender)): `busy`, `oof`, `tentative`, `elsewhere`, `allDay` | freie Termine, Tageskalender |
 | `calendars`, `writeTo` | Kalenderauswahl pro Person | nur gespeichert, noch ohne Wirkung |
 | `bookable` | Ob eine Person online buchbar ist | Personenauswahl, freie Termine |
 | `bookings` | Testbuchungen: `{ id, key, start, end, staff, svc, name, mail, tel }` | alles |
@@ -72,7 +72,7 @@ Hash-Routing, damit GitHub Pages ohne Server-Konfiguration auskommt:
 | `#/meine` | `viewMeine` | alle Testbuchungen dieses Browsers |
 | `#/verwaltung` | `viewKalender` | Tageskalender |
 | `#/verwaltung/oeffnungszeiten` | `viewOeffnung` | Öffnungszeiten, Ausnahmen, Buchungsregeln |
-| `#/verwaltung/team` | `viewTeam` | Team, Outlook-Einstellungen |
+| `#/verwaltung/team` | `viewTeam` | Team, Google-Kalender-Einstellungen |
 
 Routen, die mit `verwaltung` beginnen, werden in `adminShell()` mit Seitenleiste gerendert, alle anderen in der schmalen Kundenspalte (`.cust` › `.phone`).
 
@@ -112,9 +112,9 @@ Escape schließt das Menü. `hashchange` schließt das Menü, rendert neu und sc
 **Neue Leistung:** Eintrag in `SERVICES` mit `id`, `name`, `min` (Dauer in Minuten), `price` (Euro, Zahl) und `cats` (Kategorien aus `CATS`).
 
 **Beispieltermine ändern:** `TEMPLATE[person][wochentag]` ist eine Liste aus
-- `B('10:00', '11:30', show)`: belegt laut Outlook, `show` = `'busy'` (Standard), `'tentative'`, `'oof'` oder `'elsewhere'`
+- `B('10:00', '11:30', show)`: belegt laut Google Kalender, `show` = `'busy'` (Standard), `'tentative'` („Vielleicht“), `'oof'` (Abwesend) oder `'elsewhere'` („Verfügbar“)
 - `K('13:30', 'T. Wagner', 'herren-trocken', extra)`: Buchung über die Seite; Ende = Beginn + Dauer der Leistung
-- `ALLDAY('oof', extra)`: ganztägiger Outlook-Termin
+- `ALLDAY('oof', extra)`: ganztägiger Termin im Google Kalender
 
 `extra` kann `weeks: 'even' | 'odd'` (nur jede zweite Woche, berechnet von `weekParity()`; der 23. Oktober 2026 liegt in einer `odd`-Woche), `noshow: true` (Beispiel für „Nicht erschienen“) sowie `label`, `price` und `min` zum Überschreiben enthalten. Kundennamen bleiben erfunden.
 
