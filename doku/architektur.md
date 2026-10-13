@@ -118,7 +118,7 @@ Escape schließt das Menü. `hashchange` schließt das Menü, rendert neu und sc
 
 `extra` kann `weeks: 'even' | 'odd'` (nur jede zweite Woche, berechnet von `weekParity()`; der 23. Oktober 2026 liegt in einer `odd`-Woche), `noshow: true` (Beispiel für „Nicht erschienen“) sowie `label`, `price` und `min` zum Überschreiben enthalten. Kundennamen bleiben erfunden.
 
-**Farben und Abstände:** CSS-Variablen in `:root` von `style.css` (`--plum` ist die Akzentfarbe, `--ground` der Hintergrund). Neue Farben dort anlegen statt fest in Komponenten schreiben.
+**Farben und Abstände:** CSS-Variablen in `:root` von `style.css` (`--plum` ist die Akzentfarbe, `--grad` der Violett-Verlauf aus dem Logo für Hauptbuttons und Auswahl, `--serif` die Schrift für Überschriften, `--ground` der Hintergrund). Neue Farben dort anlegen statt fest in Komponenten schreiben.
 
 ## Bekannte Grenzen
 

@@ -58,7 +58,7 @@ Die Testversion hat zwei Bereiche:
 │   ├── index.html         ← Gerüst, lädt style.css und app.js
 │   ├── app.js             ← gesamte Logik und alle Ansichten (Vanilla JS, ein IIFE)
 │   ├── style.css          ← Farben als CSS-Variablen in :root, alle Komponenten
-│   ├── salonfoto.jpg      ← Schaufensterfoto aus dem Treatwell-Profil
+│   ├── logo.jpg           ← Logo des Salons, Quelle der Akzentfarben
 │   ├── favicon.svg
 │   └── .nojekyll          ← verhindert die Jekyll-Verarbeitung auf GitHub Pages
 └── mockup/                ← Design-Canvas-Quellen (nur Referenz)

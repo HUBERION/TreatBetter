@@ -309,9 +309,8 @@
   <button type="button" class="icon-btn" data-act="menu" aria-expanded="${U.menu}" aria-label="${U.menu ? 'Menü schließen' : 'Menü öffnen'}">${ic(U.menu ? 'close' : 'menu', 24, 2)}</button>
 </header>
 ${U.menu ? menuHtml() : ''}
-<img class="hero" src="salonfoto.jpg" alt="Schaufenster von Friseur Andrea Zechmeister in der August-Jaksch-Straße" width="738" height="360">
+<div class="hero"><h1><img class="logo" src="logo.jpg" alt="Friseur Andrea Zechmeister" width="1600" height="653"></h1></div>
 <section class="info">
-  <div class="title-block"><span class="overline">Friseur</span><h1>Andrea Zechmeister</h1></div>
   <p class="row">${ic('pin', 18)}<span>${SALON.street}, ${SALON.city}</span></p>
   <p class="row">${ic('clock', 18)}<span>${status}</span></p>
   <p class="row">${ic('phone', 18)}<span>${phoneLinks()}</span></p>
