@@ -84,9 +84,9 @@
 
   const STAFF = [
     { id: 'andrea', name: 'Andrea', role: 'Friseurmeisterin · Inhaberin', initial: 'A', bg: '#EBDDEE', fg: '#4E1F53', synced: 'vor 1 Min.',
-      calendars: [['kalender', 'Kalender', true], ['salon', 'Salon-Termine', true], ['geb', 'Geburtstage', false]] },
+      calendars: [['buchungen', 'Buchungen Andrea (Salon-Konto)', true], ['eigen', 'Eigener Kalender von Andrea', true]] },
     { id: 'pamela', name: 'Pamela', role: 'Friseurin', initial: 'P', bg: '#DCEBE3', fg: '#17573A', synced: 'vor 3 Min.',
-      calendars: [['kalender', 'Kalender', true], ['geb', 'Geburtstage', false]] },
+      calendars: [['buchungen', 'Buchungen Pamela (Salon-Konto)', true], ['eigen', 'Eigener Kalender von Pamela', true]] },
   ];
   const staffById = (id) => STAFF.find((p) => p.id === id) || { id, name: id, initial: '?' };
 
@@ -163,7 +163,6 @@
       autoHolidays: true,
       blockers: { busy: true, oof: true, tentative: true, elsewhere: false, allDay: true },
       calendars: {},
-      writeTo: {},
       bookable: { andrea: true, pamela: true },
       bookings: [],
       status: {},
@@ -176,7 +175,7 @@
       const raw = window.localStorage.getItem(STORE);
       if (!raw) return base;
       const p = JSON.parse(raw);
-      ['hours', 'rules', 'blockers', 'calendars', 'writeTo', 'bookable', 'status'].forEach((k) => {
+      ['hours', 'rules', 'blockers', 'calendars', 'bookable', 'status'].forEach((k) => {
         if (p[k] && typeof p[k] === 'object') base[k] = Object.assign(base[k], p[k]);
       });
       if (Array.isArray(p.bookings)) base.bookings = p.bookings.filter((b) => b && svc(b.svc) && /^\d{4}-\d{2}-\d{2}$/.test(b.key));
@@ -462,7 +461,7 @@ ${U.menu ? menuHtml() : ''}
 <div class="done">
   <span class="done-icon">${ic('check', 36, 2.2)}</span>
   <h1>Termin gebucht!</h1>
-  <p>Im echten Betrieb ginge jetzt eine Bestätigung an <b>${esc(b.mail)}</b>, und der Termin stünde sofort im Google Kalender von ${esc(p.name)}.</p>
+  <p>Im echten Betrieb ginge jetzt eine Bestätigung an <b>${esc(b.mail)}</b>, und der Termin stünde sofort im Kalender „Buchungen ${esc(p.name)}“ und damit auf dem Handy von ${esc(p.name)}.</p>
 </div>
 <dl class="card details">
   <dt>Wann</dt><dd><b>${longDate(d)}</b><br>${fmt(b.start)}–${fmt(b.end)} Uhr</dd>
@@ -729,14 +728,11 @@ ${U.menu ? menuHtml() : ''}
         const c = S.calendars[k] === undefined ? def : S.calendars[k];
         return `<label class="check"><input type="checkbox" data-change="cal" data-arg="${k}"${c ? ' checked' : ''}>${name}</label>`;
       }).join('');
-      const w = S.writeTo[p.id] || 'Kalender';
       return `<section class="pcard">
-  <div class="phead"><span class="avatar" style="background:${p.bg};color:${p.fg}">${p.initial}</span><div><h2>${p.name}</h2><span class="muted small">${p.role}</span></div><span class="st st-da">Verbunden</span></div>
-  <div class="acct">${ic('cal')}<div><b class="small">Google-Konto von ${p.name}</b><span class="muted" style="font-size:12px">Google Kalender · abgeglichen ${p.synced}</span></div>
-    <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Kalender trennen">Trennen</button></div>
+  <div class="phead"><span class="avatar" style="background:${p.bg};color:${p.fg}">${p.initial}</span><div><h2>${p.name}</h2><span class="muted small">${p.role}</span></div><span class="st st-da">Freigegeben</span></div>
+  <div class="acct">${ic('cal')}<div><b class="small">Buchungen ${p.name}</b><span class="muted" style="font-size:12px">im Salon-Konto · neue Buchungen landen hier und sind auf dem Handy von ${p.name} sichtbar</span></div></div>
+  <div class="acct">${ic('lock')}<div><b class="small">Eigener Kalender von ${p.name}</b><span class="muted" style="font-size:12px">freigegeben: nur frei/beschäftigt · abgeglichen ${p.synced}</span></div></div>
   <fieldset><legend>Belegt prüfen in</legend>${cals}</fieldset>
-  <div class="field"><label for="w-${p.id}" style="font-weight:700">Neue Buchungen eintragen in</label>
-    <select id="w-${p.id}" data-change="write" data-arg="${p.id}">${['Kalender', 'Salon-Termine'].map((n) => `<option${n === w ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
     <div style="display:flex;flex-direction:column;gap:2px"><span class="sublabel">Arbeitszeiten</span><span style="font-size:14px">Wie Öffnungszeiten</span></div>
     <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Eigene Arbeitszeiten">Anpassen</button>
@@ -747,9 +743,9 @@ ${U.menu ? menuHtml() : ''}
     };
     const pending = `<section class="pcard">
   <div class="phead"><span class="avatar" style="background:#FCEBD9;color:#7A4B00">+</span><div><h2>Neue Kollegin</h2><span class="muted small">Beispiel für eine offene Einladung</span></div><span class="st st-weg">Einladung offen</span></div>
-  <div class="note warn">${ic('info')}<div><span>Der Google Kalender ist noch nicht verbunden. Bis dahin ist diese Person online nicht buchbar.</span><span style="font-size:12px">Einladung per E-Mail gesendet</span></div></div>
+  <div class="note warn">${ic('info')}<div><span>Ihr Buchungskalender ist angelegt, der eigene Kalender aber noch nicht für das Salon-Konto freigegeben. Bis dahin ist diese Person online nicht buchbar.</span><span style="font-size:12px">Anleitung zur Freigabe per E-Mail gesendet</span></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button type="button" class="btn-outline" data-act="soon" data-arg="Einladung erneut senden">Einladung erneut senden</button>
+    <button type="button" class="btn-outline" data-act="soon" data-arg="Anleitung erneut senden">Anleitung erneut senden</button>
     <button type="button" class="btn-text" data-act="soon" data-arg="Link kopieren">Link kopieren</button>
   </div>
   <div><span class="sublabel">Leistungen</span><div class="svc-chips"><span>Damen</span><span>Kinder &amp; Jugend</span></div></div>
@@ -757,22 +753,27 @@ ${U.menu ? menuHtml() : ''}
     const blockers = BLOCKERS.map(([k, label]) => `<label class="check"><input type="checkbox" data-change="blocker" data-arg="${k}"${S.blockers[k] ? ' checked' : ''}>${label}</label>`).join('');
     const step = (n, title, text) => `<div class="step"><span class="step-n">${n}</span><div><b style="font-size:14px">${title}</b><span>${text}</span></div></div>`;
     return `<div class="pagehead">
-  <div><h1>Team &amp; Google Kalender</h1><p class="lead">Jede Person verbindet ihren eigenen Google Kalender, denselben wie am Handy. Wir sehen nur, wann jemand belegt ist, nicht was eingetragen ist.</p></div>
+  <div><h1>Team &amp; Google Kalender</h1><p class="lead">Die Buchungsseite ist mit einem Google-Konto des Salons verbunden. Darin hat jede Person einen Buchungskalender, dazu gibt sie ihren eigenen Kalender als „frei/beschäftigt“ frei. Wir sehen nur, wann jemand belegt ist, nicht was eingetragen ist.</p></div>
   <button type="button" class="btn-primary sm" data-act="soon" data-arg="Person einladen">${ic('plus', 18, 2)}Person einladen</button>
 </div>
+<section class="panel">
+  <div class="acct">${ic('cal')}<div><b class="small">Google-Konto des Salons</b><span class="muted" style="font-size:12px">Einzige Verbindung zur Buchungsseite · Andrea und Pamela verbinden nichts selbst</span></div>
+    <span class="st st-da">Verbunden</span>
+    <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Salon-Konto trennen">Trennen</button></div>
+</section>
 <section class="panel steps" aria-label="So entstehen freie Termine">
   ${step(1, 'Rahmen setzen', 'Öffnungszeiten des Salons und Arbeitszeit der Person')}
-  ${step(2, 'Kalender abziehen', 'Alles, was im Kalender belegt ist, plus ' + S.rules.buffer + ' Min. Puffer')}
-  ${step(3, 'Zurückschreiben', 'Jede Buchung landet sofort als Termin im Google Kalender und damit am Handy')}
+  ${step(2, 'Kalender abziehen', 'Alles, was im Buchungskalender oder im eigenen Kalender belegt ist, plus ' + S.rules.buffer + ' Min. Puffer')}
+  ${step(3, 'Zurückschreiben', 'Jede Buchung landet sofort im Buchungskalender der Person und damit auf ihrem Handy')}
 </section>
 <div class="cards">${STAFF.map(card).join('')}${pending}</div>
 <section class="panel" style="display:flex;flex-wrap:wrap;gap:20px 40px">
   <fieldset style="flex:1 1 320px">
     <legend style="font-size:17px;color:var(--ink);margin-bottom:4px">Was blockiert einen Termin?</legend>
-    <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:8px">Maßgeblich ist, wie der Termin im Google Kalender eingetragen ist. Achtung: Ganztägige Termine sind dort standardmäßig „Verfügbar“. Im Test sind z. B. donnerstags die Fortbildung von Andrea (Abwesend) und dienstags der Nachmittag von Pamela (Vielleicht) eingetragen.</p>
+    <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:8px">Maßgeblich ist, wie der Termin im Google Kalender eingetragen ist. Aus eigenen Kalendern, die nur als „frei/beschäftigt“ freigegeben sind, kommt allerdings nur „belegt“; dort zählt alles, was „Beschäftigt“ ist. Achtung: Ganztägige Termine wie Urlaub sind in Google standardmäßig „Verfügbar“, bitte als „Beschäftigt“ eintragen. Im Test sind z. B. donnerstags die Fortbildung von Andrea (Abwesend) und dienstags der Nachmittag von Pamela (Vielleicht) eingetragen.</p>
     ${blockers}
   </fieldset>
-  <div class="note" style="flex:1 1 320px;align-self:flex-start">${ic('shield', 22)}<div><b style="font-size:14px">Datenschutz</b><span>Gelesen wird nur „frei“ oder „belegt“. Betreff, Ort, Teilnehmer und Inhalte privater Termine werden weder angezeigt noch gespeichert.</span></div></div>
+  <div class="note" style="flex:1 1 320px;align-self:flex-start">${ic('shield', 22)}<div><b style="font-size:14px">Datenschutz</b><span>Gelesen wird nur „frei“ oder „belegt“. Die eigenen Kalender sind nur als „frei/beschäftigt“ freigegeben, das Salon-Konto sieht Titel, Ort, Teilnehmer und Inhalte privater Termine also gar nicht.</span></div></div>
 </section>`;
   }
 
@@ -952,7 +953,6 @@ ${U.menu ? menuHtml() : ''}
     'day-to': (wd, el) => setTime(wd, 'to', el),
     rule: (k, el) => { S.rules[k] = /^\d+$/.test(el.value) ? Number(el.value) : el.value; save(); rerender(); },
     cal: (k, el) => { S.calendars[k] = el.checked; save(); },
-    write: (k, el) => { S.writeTo[k] = el.value; save(); },
     blocker: (k, el) => {
       S.blockers[k] = el.checked;
       save();

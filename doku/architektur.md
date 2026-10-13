@@ -47,7 +47,7 @@ Die Datei ist in Abschnitte gegliedert, jeweils mit einem Kommentar `/* --------
 | `rules` | `step`, `buffer`, `lead` (Minuten), `weeks` (Buchungshorizont), `storno` (Stunden), `reminder`, `noshow` | `step`, `buffer`, `lead`, `weeks`, `storno` wirken; `reminder` und `noshow` werden nur gespeichert |
 | `autoHolidays` | Feiertage automatisch schließen | freie Termine, Ausnahmenliste |
 | `blockers` | Welche Arten von Google-Kalender-Terminen blockieren (siehe [fachlogik.md](fachlogik.md#termine-aus-dem-google-kalender)): `busy`, `oof`, `tentative`, `elsewhere`, `allDay` | freie Termine, Tageskalender |
-| `calendars`, `writeTo` | Kalenderauswahl pro Person | nur gespeichert, noch ohne Wirkung |
+| `calendars` | Welche Kalender pro Person als belegt zählen (Buchungskalender im Salon-Konto, eigener Kalender), Schlüssel `person.kalender` | nur gespeichert, noch ohne Wirkung |
 | `bookable` | Ob eine Person online buchbar ist | Personenauswahl, freie Termine |
 | `bookings` | Testbuchungen: `{ id, key, start, end, staff, svc, name, mail, tel }` | alles |
 | `status` | Anwesenheit je Termin-ID: `da`, `weg` oder `offen` | Tageskalender |
@@ -72,7 +72,7 @@ Hash-Routing, damit GitHub Pages ohne Server-Konfiguration auskommt:
 | `#/meine` | `viewMeine` | alle Testbuchungen dieses Browsers |
 | `#/verwaltung` | `viewKalender` | Tageskalender |
 | `#/verwaltung/oeffnungszeiten` | `viewOeffnung` | Öffnungszeiten, Ausnahmen, Buchungsregeln |
-| `#/verwaltung/team` | `viewTeam` | Team, Google-Kalender-Einstellungen |
+| `#/verwaltung/team` | `viewTeam` | Salon-Konto, Team, Google-Kalender-Einstellungen |
 
 Routen, die mit `verwaltung` beginnen, werden in `adminShell()` mit Seitenleiste gerendert, alle anderen in der schmalen Kundenspalte (`.cust` › `.phone`).
 
