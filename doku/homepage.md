@@ -6,7 +6,7 @@ Eigene Visitenkarten-Website für Friseur Andrea Zechmeister im Ordner [`homepag
 
 | Datei | Zweck |
 |---|---|
-| `index.html` | Startseite: Logo, Leistungen und Preise, Team, Öffnungszeiten, Kontakt und Anfahrt |
+| `index.html` | Startseite: Logo, Leistungen (ohne Preise), Team, Öffnungszeiten, Kontakt und Anfahrt |
 | `impressum.html` | Impressum nach ECG, UGB und Mediengesetz |
 | `datenschutz.html` | Datenschutzerklärung (keine Cookies, kein Tracking) |
 | `style.css` | alle Stile, Farben als CSS-Variablen in `:root` |

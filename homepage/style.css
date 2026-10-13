@@ -96,12 +96,10 @@ p { margin: 0; }
 @media (min-width: 760px) { .cards { grid-template-columns: repeat(3, 1fr); } }
 .card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
 .card h3 { font-size: 24px; margin-bottom: 12px; color: var(--plum-d); }
-.prices { margin: 0; }
-.prices div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
-.prices div:last-child { border-bottom: 0; }
-.prices dt { color: var(--ink); }
-.prices dt span { display: block; color: var(--muted); font-size: 14px; }
-.prices dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.prices { margin: 0; padding: 0; list-style: none; }
+.prices li { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.prices li:last-child { border-bottom: 0; }
+.prices li span { display: block; color: var(--muted); font-size: 14px; }
 .note { margin-top: 12px; color: var(--muted); font-size: 15px; }
 .pay { margin-top: 28px; color: var(--ink2); }
 
