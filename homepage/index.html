@@ -177,36 +177,51 @@
           <li><span>Salon</span> <a href="tel:+43463515952">0463 51 59 52</a></li>
           <li><span>Mobil</span> <a href="tel:+436764604883">0676 460 48 83</a></li>
         </ul>
-        <p class="muted">Parkmöglichkeiten gibt es im Innenhof und in der Nähe. Die Parkplätze im Innenhof sind mit „Friseur“ gekennzeichnet. Der Salon ist barrierefrei.</p>
+        <p class="muted">Parkmöglichkeiten gibt es im Innenhof und in der Nähe. Die Einfahrt zum Innenhof erreichst du über die Rosentaler Straße, die Parkplätze dort sind mit „Friseur“ gekennzeichnet. Der Salon ist barrierefrei.</p>
 
         <!-- Lageplan: eigene Zeichnung nach Angaben des Salons, keine Kartendaten von Dritten -->
         <figure class="plan">
-          <svg viewBox="0 0 360 250" role="img" aria-labelledby="plan-titel plan-text">
-            <title id="plan-titel">Lageplan Salon und Parkplätze</title>
-            <desc id="plan-text">Der Salon liegt im Haus August-Jaksch-Straße 1, Ecke Rosentaler Straße. Links neben dem Haus, an der August-Jaksch-Straße, liegt der Innenhof mit den Parkplätzen, die mit „Friseur“ gekennzeichnet sind.</desc>
+          <svg viewBox="0 0 360 290" role="img" aria-labelledby="plan-titel plan-text">
+            <title id="plan-titel">Lageplan Salon und Zufahrt zu den Parkplätzen</title>
+            <desc id="plan-text">Der Salon liegt im Haus August-Jaksch-Straße 1, Ecke Rosentaler Straße. Zu den Parkplätzen: Aus jeder Richtung zur Kreuzung August-Jaksch-Straße und Rosentaler Straße fahren, in die Rosentaler Straße einbiegen, am Haus vorbei und dann rechts in die Einfahrt zum Innenhof. Die Parkplätze im Innenhof sind mit „Friseur“ gekennzeichnet.</desc>
+            <defs>
+              <marker id="pfeil" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#C2410C"/>
+              </marker>
+            </defs>
             <!-- Straßen -->
             <rect x="0" y="22" width="360" height="36" fill="#E3DFE7"/>
-            <rect x="292" y="0" width="40" height="250" fill="#E3DFE7"/>
-            <text x="140" y="45" text-anchor="middle" font-size="13" font-weight="600" fill="#3D3944">August-Jaksch-Straße</text>
-            <text x="312" y="160" text-anchor="middle" font-size="13" font-weight="600" fill="#3D3944" transform="rotate(90 312 160)">Rosentaler Straße</text>
-            <!-- Innenhof mit Parkplätzen -->
-            <rect x="14" y="70" width="140" height="166" rx="10" fill="#FFFFFF" stroke="#7B2D8E" stroke-width="2" stroke-dasharray="6 5"/>
-            <circle cx="84" cy="112" r="20" fill="#7B2D8E"/>
-            <text x="84" y="120" text-anchor="middle" font-size="22" font-weight="800" fill="#FFFFFF">P</text>
-            <text x="84" y="156" text-anchor="middle" font-size="14" font-weight="700" fill="#5A1E6C">Innenhof</text>
-            <text x="84" y="178" text-anchor="middle" font-size="12" fill="#3D3944">Parkplätze mit</text>
-            <text x="84" y="195" text-anchor="middle" font-size="12" fill="#3D3944">„Friseur“</text>
-            <text x="84" y="212" text-anchor="middle" font-size="12" fill="#3D3944">gekennzeichnet</text>
+            <rect x="292" y="0" width="40" height="290" fill="#E3DFE7"/>
+            <text x="96" y="45" text-anchor="middle" font-size="13" font-weight="600" fill="#3D3944">August-Jaksch-Straße</text>
+            <text x="322" y="150" text-anchor="middle" font-size="12" font-weight="600" fill="#3D3944" transform="rotate(90 322 150)">Rosentaler Straße</text>
+            <!-- Innenhof mit Parkplätzen und Einfahrt -->
+            <rect x="14" y="70" width="140" height="196" rx="10" fill="#FFFFFF" stroke="#7B2D8E" stroke-width="2" stroke-dasharray="6 5"/>
+            <rect x="150" y="210" width="142" height="36" fill="#FFFFFF" stroke="#7B2D8E" stroke-width="2" stroke-dasharray="6 5"/>
+            <rect x="148" y="212" width="8" height="32" fill="#FFFFFF"/>
+            <circle cx="84" cy="106" r="20" fill="#7B2D8E"/>
+            <text x="84" y="114" text-anchor="middle" font-size="22" font-weight="800" fill="#FFFFFF">P</text>
+            <text x="84" y="146" text-anchor="middle" font-size="14" font-weight="700" fill="#5A1E6C">Innenhof</text>
+            <text x="84" y="166" text-anchor="middle" font-size="12" fill="#3D3944">Parkplätze mit</text>
+            <text x="84" y="182" text-anchor="middle" font-size="12" fill="#3D3944">„Friseur“</text>
+            <text x="84" y="198" text-anchor="middle" font-size="12" fill="#3D3944">gekennzeichnet</text>
+            <text x="222" y="266" text-anchor="middle" font-size="12" font-weight="700" fill="#C2410C">Einfahrt Innenhof</text>
             <!-- Haus Nr. 1 mit Salon -->
-            <rect x="166" y="70" width="114" height="166" rx="6" fill="#F1E4F5" stroke="#7B2D8E" stroke-width="2"/>
-            <text x="268" y="226" text-anchor="end" font-size="12" fill="#5E5A66">Nr. 1</text>
+            <rect x="166" y="70" width="114" height="128" rx="6" fill="#F1E4F5" stroke="#7B2D8E" stroke-width="2"/>
+            <text x="270" y="190" text-anchor="end" font-size="12" fill="#5E5A66">Nr. 1</text>
             <path d="M190 74 c-9 0 -15 7 -15 15 c0 11 15 24 15 24 s15 -13 15 -24 c0 -8 -6 -15 -15 -15z" fill="#7B2D8E"/>
             <circle cx="190" cy="89" r="5" fill="#FFFFFF"/>
-            <text x="223" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#5A1E6C">Salon</text>
-            <text x="223" y="158" text-anchor="middle" font-size="12" fill="#3D3944">Friseur Andrea</text>
-            <text x="223" y="174" text-anchor="middle" font-size="12" fill="#3D3944">Zechmeister</text>
+            <text x="223" y="132" text-anchor="middle" font-size="13" font-weight="700" fill="#5A1E6C">Salon</text>
+            <text x="223" y="150" text-anchor="middle" font-size="12" fill="#3D3944">Friseur Andrea</text>
+            <text x="223" y="166" text-anchor="middle" font-size="12" fill="#3D3944">Zechmeister</text>
+            <!-- Zufahrt: aus allen Richtungen zur Kreuzung, dann Rosentaler Straße und rechts in den Innenhof -->
+            <g stroke="#C2410C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <line x1="196" y1="48" x2="284" y2="48" marker-end="url(#pfeil)"/>
+              <line x1="358" y1="32" x2="342" y2="32" marker-end="url(#pfeil)"/>
+              <line x1="304" y1="2" x2="304" y2="16" marker-end="url(#pfeil)"/>
+              <polyline points="304,64 304,228 60,228" marker-end="url(#pfeil)"/>
+            </g>
           </svg>
-          <figcaption>Vereinfachter Lageplan, nicht maßstabsgetreu.</figcaption>
+          <figcaption>Vereinfachter Lageplan, nicht maßstabsgetreu. Die orangen Pfeile zeigen die Zufahrt zum Innenhof.</figcaption>
         </figure>
 
         <div class="actions">
