@@ -124,6 +124,9 @@ p { margin: 0; }
 .contact-list { list-style: none; padding: 0; margin: 0 0 16px; }
 .contact-list li { display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .contact-list span { width: 56px; color: var(--muted); font-size: 15px; }
+.plan { margin: 20px 0 0; max-width: 420px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+.plan svg { display: block; width: 100%; height: auto; font-family: var(--sans); }
+.plan figcaption { margin-top: 6px; color: var(--muted); font-size: 13px; }
 .contact-list a { font-size: 20px; font-weight: 700; text-decoration: none; padding: 6px 0; }
 
 /* ---------- Abschluss ---------- */
