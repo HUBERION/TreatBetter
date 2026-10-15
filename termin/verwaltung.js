@@ -24,6 +24,7 @@
   const ICONS = {
     cal: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     week: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 10v10M12 10v10M16 10v10"/>',
+    users: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.4c2.4.2 4.1 1.8 4.6 4.1"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
     sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -45,6 +46,8 @@
   let angemeldet = null;
   let demo = false;
   let suche = { q: '', treffer: null, laedt: false, fehler: '' };
+  const kartei = { q: '', liste: null, gesamt: null, fehler: '' };
+  const karte = { id: null, daten: null, fehler: '' };
   let M = null;            // offener Dialog
   const app = document.getElementById('app');
   const dlg = document.getElementById('modal');
@@ -68,7 +71,8 @@
     const heute = keyOf(new Date());
     const datum = /^\d{4}-\d{2}-\d{2}$/.test(r[1] || '') ? r[1] : heute;
     if (r[0] === 'woche') return { view: 'woche', datum: montag(datum) };
-    if (r[0] === 'suche') return { view: 'suche' };
+    if (r[0] === 'suche' || r[0] === 'kunden') return { view: 'kunden' };
+    if (r[0] === 'kunde' && /^[0-9a-f]{16}$/.test(r[1] || '')) return { view: 'kunde', id: r[1] };
     if (r[0] === 'einstellungen') return { view: 'einstellungen' };
     return { view: 'tag', datum };
   }
@@ -77,6 +81,8 @@
   async function laden(still) {
     const r = route();
     const z = zeitraum(r);
+    if (r.view === 'kunden') karteiLaden();
+    if (r.view === 'kunde' && (still || karte.id !== r.id || !karte.daten)) karteLaden(r.id);
     if (!z && D) { render(); return; }
     const [von, tage] = (z || keyOf(new Date()) + '/1').split('/');
     if (!still) { laedt = true; fehler = ''; render(); }
@@ -91,6 +97,42 @@
     render();
   }
 
+  let karteiNr = 0;
+  async function karteiLaden() {
+    const nr = ++karteiNr;
+    try {
+      const r = await api('kunden', { q: kartei.q });
+      if (nr !== karteiNr) return;
+      kartei.liste = r.kunden; kartei.gesamt = r.gesamt; kartei.fehler = '';
+    } catch (e) {
+      if (nr !== karteiNr) return;
+      kartei.fehler = e.message;
+    }
+    if (route().view === 'kunden') neuZeichnenBehaltenFokus();
+  }
+
+  async function karteLaden(id) {
+    karte.id = id; karte.fehler = '';
+    if (karte.daten && karte.daten.id !== id) karte.daten = null;
+    try {
+      karte.daten = (await api('kunde', { id })).kunde;
+    } catch (e) {
+      if (e.status !== 401) karte.fehler = e.message;
+    }
+    if (route().view === 'kunde') render();
+  }
+
+  // Beim Tippen in der Suche neu zeichnen, ohne dass das Eingabefeld den Fokus oder die Schreibmarke verliert
+  function neuZeichnenBehaltenFokus() {
+    const a = document.activeElement;
+    const id = a && a.id, pos = a && typeof a.selectionStart === 'number' ? a.selectionStart : null;
+    render();
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) { el.focus({ preventScroll: true }); if (pos !== null) try { el.setSelectionRange(pos, pos); } catch (e) { /* egal */ } }
+    }
+  }
+
   /* ---------- Ansichten ---------- */
   function shell(r, inner) {
     const link = (href, icon, label, key) => `<a class="side-link" href="${href}"${r.view === key ? ' aria-current="page"' : ''}>${ic(icon, 18)}${label}</a>`;
@@ -102,7 +144,7 @@
     <div class="side-links">
       ${link('#/tag/' + (r.view === 'woche' ? datum : datum), 'cal', 'Tag', 'tag')}
       ${link('#/woche/' + datum, 'week', 'Woche', 'woche')}
-      ${link('#/suche', 'search', 'Kundensuche', 'suche')}
+      ${link('#/kunden', 'users', 'Kunden', r.view === 'kunde' ? r.view : 'kunden')}
       ${link('#/einstellungen', 'sliders', 'Einstellungen' + (pausiert ? ' <span class="badge">pausiert</span>' : ''), 'einstellungen')}
       <button type="button" class="side-link cta" data-act="neu">${ic('plus', 18, 2)}Eintragen</button>
     </div>
@@ -243,13 +285,82 @@
         <div class="bk-actions"><button type="button" class="mini" data-act="such-detail" data-arg="${esc(t.person)}|${esc(t.id)}">Details</button><a class="mini" href="#/tag/${t.tag}" style="text-decoration:none;display:inline-flex;align-items:center">Zum Tag</a></div>
       </div>`).join('') : '<p class="muted">Nichts gefunden. Gesucht wird in den letzten 12 Monaten und allen kommenden Terminen.</p>';
     }
-    return `<div class="pagehead"><div><h1>Kundensuche</h1><span class="muted" style="font-size:14px">Nach Name, Telefonnummer oder E-Mail suchen</span></div></div>
-<form class="suchfeld" data-submit="suche" role="search">
-  <label class="sr-only" for="such-q" style="position:absolute;left:-9999px">Suchbegriff</label>
-  <input id="such-q" name="q" type="search" placeholder="z. B. Huber oder 0664 …" value="${esc(suche.q)}" autocomplete="off">
-  <button type="submit" class="btn-primary sm">${ic('search', 18, 2)}Suchen</button>
-</form>
-<section class="panel">${ergebnis || '<p class="muted">Gib einen Namen oder eine Telefonnummer ein.</p>'}</section>`;
+    return ergebnis;
+  }
+
+  /* ---------- Kundenkartei ---------- */
+  const besuchKurz = (b) => (b ? `${esc(shortDate(b.tag))}${b.uhr ? ', ' + esc(b.uhr) : ''} · ${esc(b.leistung)}${b.personName ? ' bei ' + esc(b.personName) : ''}` : '');
+
+  function viewKunden() {
+    const liste = kartei.liste;
+    let inhalt;
+    if (kartei.fehler) inhalt = `<p class="err" role="alert">${esc(kartei.fehler)}</p>`;
+    else if (!liste) inhalt = '<p class="muted">Wird geladen …</p>';
+    else if (!liste.length) inhalt = kartei.q
+      ? `<p class="muted">Keine Kundenkarte gefunden.</p>`
+      : `<p class="muted">Noch keine Kundenkarten. Leg die erste mit „Neue Kundenkarte“ an, zum Beispiel von einer Papierkarte.</p>`;
+    else inhalt = liste.map((k) => `<a class="bk" href="#/kunde/${esc(k.id)}" style="text-decoration:none;color:inherit">
+        <div class="bk-top"><div class="bk-main"><b>${esc(k.name)}</b>
+          <span>${k.tel ? esc(k.tel) : ''}${k.tel && k.mail ? ' · ' : ''}${k.mail ? esc(k.mail) : ''}</span>
+          ${k.letzter ? `<span>Zuletzt: ${besuchKurz(k.letzter)}</span>` : '<span>Noch kein Besuch eingetragen</span>'}
+          ${k.naechster ? `<span><span class="badge g">Nächster Termin</span> ${besuchKurz(k.naechster)}</span>` : ''}</div>
+          ${ic('right', 18, 2)}</div></a>`).join('');
+    return `<div class="pagehead"><div><h1>Kunden</h1><span class="muted" style="font-size:14px">${kartei.gesamt != null ? kartei.gesamt + ' Kundenkarte' + (kartei.gesamt === 1 ? '' : 'n') : ''}</span></div>
+  <button type="button" class="btn-primary sm" data-act="karte-neu">${ic('plus', 18, 2)}Neue Kundenkarte</button></div>
+<div class="suchfeld" role="search">
+  <label for="kartei-q" style="position:absolute;left:-9999px">Kundenkarte suchen</label>
+  <input id="kartei-q" type="search" placeholder="Name oder Telefonnummer …" value="${esc(kartei.q)}" autocomplete="off" data-input="kartei">
+</div>
+<section class="panel">${inhalt}</section>
+<section class="panel">
+  <h2>Auch Termine ohne Kundenkarte durchsuchen</h2>
+  <form class="suchfeld" data-submit="suche" role="search" style="margin-top:10px">
+    <label for="such-q" style="position:absolute;left:-9999px">In Terminen suchen</label>
+    <input id="such-q" name="q" type="search" placeholder="z. B. Huber oder 0664 …" value="${esc(suche.q)}" autocomplete="off">
+    <button type="submit" class="btn-outline">${ic('search', 18, 2)}Suchen</button>
+  </form>
+  <div style="margin-top:8px">${viewSuche()}</div>
+</section>`;
+  }
+
+  function viewKunde(r) {
+    const k = karte.daten && karte.daten.id === r.id ? karte.daten : null;
+    if (karte.fehler) return `<div class="note warn" role="alert">${ic('info', 20)}<div><b>Kundenkarte nicht gefunden</b><span>${esc(karte.fehler)}</span><a href="#/kunden">Zur Kundenliste</a></div></div>`;
+    if (!k) return '<p class="muted">Wird geladen …</p>';
+    const jetzt = Date.now() / 1000;
+    const kommend = k.besuche.filter((b) => b.beginn > jetzt).reverse();
+    const bisher = k.besuche.filter((b) => b.beginn <= jetzt);
+    const zeile = (b) => `<div class="bk"><div class="bk-top">
+        <span class="bk-time" style="width:auto;min-width:92px">${esc(shortDate(b.tag))}${b.uhr ? '<br><span class="muted">' + esc(b.uhr) + '</span>' : ''}</span>
+        <div class="bk-main"><b>${esc(b.leistung)}</b><span>${b.personName ? 'bei ' + esc(b.personName) : ''}${b.quelle === 'online' ? ' · online gebucht' : b.quelle === 'nachgetragen' ? ' · nachgetragen' : ''}</span></div>
+        ${b.quelle === 'nachgetragen' ? `<button type="button" class="mini" data-act="besuch-weg" data-arg="${esc(b.id)}" aria-label="Nachgetragenen Besuch vom ${esc(shortDate(b.tag))} entfernen">Entfernen</button>` : b.terminId ? `<a class="mini" href="#/tag/${b.tag}" style="text-decoration:none;display:inline-flex;align-items:center">Zum Tag</a>` : ''}
+      </div></div>`;
+    return `<div class="pagehead">
+  <div><h1>${esc(k.name)}</h1><span class="muted" style="font-size:14px">${k.anzahl} Besuch${k.anzahl === 1 ? '' : 'e'}${k.letzter ? ' · zuletzt ' + esc(shortDate(k.letzter.tag)) : ''}</span></div>
+  <button type="button" class="btn-primary sm" data-act="karte-termin">${ic('plus', 18, 2)}Termin eintragen</button>
+</div>
+<div class="split">
+  <div style="flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:16px">
+    ${k.letzter ? `<section class="panel" style="border-color:var(--plum);box-shadow:inset 0 0 0 1px var(--plum)"><h2>Letztes Mal</h2><p style="margin-top:6px;font-size:16px"><b>${esc(k.letzter.leistung)}</b></p><p class="muted">${esc(longDate(k.letzter.tag))}${k.letzter.personName ? ' bei ' + esc(k.letzter.personName) : ''}</p></section>` : ''}
+    <section class="panel"><h2>Kommende Termine</h2><div style="margin-top:6px">${kommend.map(zeile).join('') || '<p class="muted small">Kein Termin eingetragen.</p>'}</div></section>
+    <section class="panel"><div class="modal-head"><h2>Bisherige Besuche</h2><button type="button" class="mini" data-act="besuch-neu">Besuch nachtragen</button></div><div style="margin-top:6px">${bisher.map(zeile).join('') || '<p class="muted small">Noch keine Besuche. Von der Papierkarte kannst du den letzten Besuch nachtragen.</p>'}</div></section>
+  </div>
+  <aside class="aside">
+    <section class="panel">
+      <div class="modal-head"><h2>Kontakt &amp; Notiz</h2><button type="button" class="mini" data-act="karte-bearbeiten">Bearbeiten</button></div>
+      <dl class="infozeilen" style="margin-top:10px">
+        <dt>Telefon</dt><dd>${k.tel ? `<a href="tel:${esc(k.tel.replace(/[^\d+]/g, ''))}">${esc(k.tel)}</a>` : '–'}</dd>
+        <dt>E-Mail</dt><dd>${k.mail ? `<a href="mailto:${esc(k.mail)}">${esc(k.mail)}</a>` : '–'}</dd>
+      </dl>
+      <p style="margin-top:12px;white-space:pre-wrap">${k.notiz ? esc(k.notiz) : '<span class="muted">Keine Notiz.</span>'}</p>
+    </section>
+    <section class="panel">
+      <h2>Datenschutz</h2>
+      <p class="muted small" style="margin-top:6px">Diese Karte wird am ${esc(longDate(k.loeschenAm))} automatisch gelöscht, wenn bis dahin kein Besuch mehr dazukommt.</p>
+      <button type="button" class="btn-danger" data-act="karte-loeschen" style="margin-top:10px">Karte jetzt löschen</button>
+    </section>
+  </aside>
+</div>`;
   }
 
   function viewEinstellungen() {
@@ -304,10 +415,10 @@
       return;
     }
     const r = route();
-    const inner = r.view === 'woche' ? viewWoche(r) : r.view === 'suche' ? viewSuche() : r.view === 'einstellungen' ? viewEinstellungen() : viewTag(r);
+    const inner = r.view === 'woche' ? viewWoche(r) : r.view === 'kunden' ? viewKunden() : r.view === 'kunde' ? viewKunde(r) : r.view === 'einstellungen' ? viewEinstellungen() : viewTag(r);
     const fokus = document.activeElement && app.contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.act : null;
     app.innerHTML = shell(r, inner);
-    document.title = ({ tag: 'Tag', woche: 'Woche', suche: 'Kundensuche', einstellungen: 'Einstellungen' }[r.view]) + ' – Dashboard';
+    document.title = ({ tag: 'Tag', woche: 'Woche', kunden: 'Kunden', kunde: 'Kundenkarte', einstellungen: 'Einstellungen' }[r.view]) + ' – Dashboard';
     if (fokus) { const el = app.querySelector('[data-act="' + CSS.escape(fokus) + '"]'); if (el) el.focus({ preventScroll: true }); }
   }
 
@@ -365,11 +476,22 @@
           ${feld('uhr', 'Uhrzeit', 'time', f.uhr, ' step="300" required')}
           ${dauerFeld}
           <p class="muted small full" id="ende-hinweis" aria-live="polite">${endeText(f.uhr, eigene || f.dauerEigen ? f.dauer || (vorgabe ? vorgabe.min : '') : vorgabe && vorgabe.min)}</p>
-          <div class="full">${feld('name', 'Name der Kundin bzw. des Kunden', 'text', f.name, ' autocomplete="off" maxlength="80" required')}</div>
+          <div class="full">
+            ${f.kunde
+              ? `<div class="note" style="align-items:center">${ic('users', 20)}<div style="flex:1"><b>${esc(f.kunde.name)} · Kundenkarte</b>
+                  <span>${f.kunde.letzter ? 'Zuletzt: ' + besuchKurz(f.kunde.letzter) : 'Noch kein Besuch eingetragen'}</span></div>
+                  ${f.kunde.letzter && f.kunde.letzter.leistungId ? `<button type="button" class="mini" data-act="gleiche-leistung">Gleiche Leistung</button>` : ''}
+                  <button type="button" class="mini" data-act="kunde-loesen" aria-label="Kundenkarte nicht verwenden">Andere Person</button></div>
+                <input type="hidden" name="name" value="${esc(f.name)}">`
+              : `${feld('name', 'Name der Kundin bzw. des Kunden', 'text', f.name, ' autocomplete="off" maxlength="80" required aria-describedby="vorschlag-hinweis"')}
+                <div id="vorschlaege" class="vorschlaege">${vorschlaegeHtml()}</div>
+                <span class="muted small" id="vorschlag-hinweis">Beim Tippen erscheinen passende Kundenkarten.</span>`}
+          </div>
           ${feld('tel', 'Telefon (freiwillig)', 'tel', f.tel, ' autocomplete="off" maxlength="25"')}
           ${feld('mail', 'E-Mail (freiwillig)', 'email', f.mail, ' autocomplete="off" maxlength="120"')}
         </div>
-        <label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Bestätigung per E-Mail schicken (nur wenn E-Mail angegeben; dann auch Erinnerung am Vortag)</label>`;
+        <label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Bestätigung per E-Mail schicken (nur wenn E-Mail angegeben; dann auch Erinnerung am Vortag)</label>
+        ${f.kunde ? '' : `<label class="check"><input type="checkbox" name="kartei"${f.kartei ? ' checked' : ''}> In der Kundenkartei speichern (Stammkundin bzw. Stammkunde)</label>`}`;
       } else {
         const gruende = ['Pause', 'Arzttermin', 'Frei', 'Urlaub', 'Krank', 'Sonstiges'];
         felder = `<div class="grid2">
@@ -414,6 +536,8 @@
         <div class="knoepfe">
           ${t.tel ? `<a class="btn-outline" href="tel:${esc(t.tel.replace(/[^\d+]/g, ''))}">${ic('phone', 18)}Anrufen</a>` : ''}
           ${!t.ganztags ? `<button type="button" class="btn-outline" data-act="verschieben" data-arg="${esc(M.arg)}">Verschieben</button>` : ''}
+          ${kunde && t.kunde ? `<a class="btn-outline" href="#/kunde/${esc(t.kunde)}" data-act="schliessen-weiter">${ic('users', 18)}Kundenkarte</a>` : ''}
+          ${kunde && !t.kunde && !t.anonym ? `<button type="button" class="btn-outline" data-act="als-stammkunde" data-arg="${esc(M.arg)}">${ic('users', 18)}Als Stammkunde speichern</button>` : ''}
           <button type="button" class="btn-danger" data-act="absagen" data-arg="${esc(M.arg)}">${kunde ? 'Termin absagen' : 'Eintrag löschen'}</button>
         </div>
         ${M.absagen ? `<div class="panel" style="background:#FDF6F5;border-color:#F0D2CE">
@@ -435,8 +559,55 @@
           <div class="knoepfe">${M.konflikt ? '<button type="button" class="btn-outline" data-act="trotzdem">Trotzdem verschieben</button>' : ''}
           <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird verschoben …' : 'Verschieben'}</button></div>
         </form>`;
+    } else if (M.typ === 'karte') {
+      const f = M.werte;
+      html = `${kopfDialog(f.id ? 'Kundenkarte bearbeiten' : 'Neue Kundenkarte')}
+        <form class="stack" data-submit="karte" novalidate>
+          ${feld('name', 'Name', 'text', f.name, ' autocomplete="off" maxlength="80" required')}
+          <div class="grid2">${feld('tel', 'Telefon (freiwillig)', 'tel', f.tel, ' autocomplete="off" maxlength="25"')}${feld('mail', 'E-Mail (freiwillig)', 'email', f.mail, ' autocomplete="off" maxlength="120"')}</div>
+          <div class="field"><label for="f-notiz">Notiz (freiwillig)</label><textarea id="f-notiz" name="notiz" maxlength="1000" placeholder="z. B. Farbrezeptur, Wünsche, Haartyp">${esc(f.notiz || '')}</textarea>
+          <span class="muted small">Bitte keine Gesundheitsangaben wie Allergien oder Krankheiten eintragen.</span></div>
+          ${fehlerHtml()}
+          <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird gespeichert …' : 'Speichern'}</button>
+        </form>`;
+    } else if (M.typ === 'besuch') {
+      const f = M.werte;
+      html = `${kopfDialog('Besuch nachtragen')}
+        <p class="muted">Für Besuche von früher, zum Beispiel von der Papierkarte.</p>
+        <form class="stack" data-submit="besuch" novalidate>
+          <div class="grid2">
+            ${feld('tag', 'Datum', 'date', f.tag, ' required max="' + keyOf(new Date()) + '"')}
+            ${auswahlPerson('person', f.person)}
+            <div class="field full"><label for="f-leistung">Leistung</label><select id="f-leistung" name="leistung" data-change="leistung">${D.leistungen.map((l) => `<option value="${l.id}"${f.leistung === l.id ? ' selected' : ''}>${esc(l.voll)}</option>`).join('')}
+              <option value="eigene"${f.leistung === 'eigene' ? ' selected' : ''}>Andere Tätigkeit …</option></select></div>
+            ${f.leistung === 'eigene' ? `<div class="full">${feld('taetigkeit', 'Was wurde gemacht?', 'text', f.taetigkeit, ' maxlength="60" required')}</div>` : ''}
+          </div>
+          ${fehlerHtml()}
+          <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird gespeichert …' : 'Nachtragen'}</button>
+        </form>`;
     }
     dlg.innerHTML = `<div class="modal-in">${html}</div>`;
+  }
+
+  function vorschlaegeHtml() {
+    const v = M && M.vorschlaege;
+    if (!v || !v.length) return '';
+    return `<span class="sublabel">Kundenkarten</span>` + v.map((k, i) => `<button type="button" class="wk-item" data-act="kunde-waehlen" data-arg="${i}"><b style="width:auto">${esc(k.name)}</b><span class="muted">${esc(k.tel || k.mail || '')}${k.letzter ? ' · zuletzt ' + esc(shortDate(k.letzter.tag)) : ''}</span></button>`).join('');
+  }
+
+  let vorschlagTimer = null;
+  function vorschlaegeSuchen(q) {
+    clearTimeout(vorschlagTimer);
+    if (q.trim().length < 2) { M.vorschlaege = []; const el = dlg.querySelector('#vorschlaege'); if (el) el.innerHTML = ''; return; }
+    vorschlagTimer = setTimeout(async () => {
+      try {
+        const r = await api('kunden', { q });
+        if (!M || M.typ !== 'neu') return;
+        M.vorschlaege = r.kunden.slice(0, 5);
+        const el = dlg.querySelector('#vorschlaege');
+        if (el) el.innerHTML = vorschlaegeHtml();
+      } catch (e) { /* Vorschläge sind nur eine Hilfe */ }
+    }, 250);
   }
 
   function formWerte(form) {
@@ -460,7 +631,7 @@
       let gemailt = false;
       for (const person of personen) {
         const body = f.art === 'termin'
-          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit, dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail, mailSenden: f.mailSenden && !!f.mail, trotzdem: !!trotzdem }
+          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit, dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail, mailSenden: f.mailSenden && !!f.mail, kundeId: f.kunde ? f.kunde.id : '', kartei: !f.kunde && !!f.kartei, trotzdem: !!trotzdem }
           : { art: 'block', person, tag: f.tag, bisTag: f.bisTag, ganztags: !!f.ganztags, uhr: f.uhr, bis: f.bis, grund: f.grund, notiz: f.notiz };
         const r = await api('eintragen', {}, body);
         gemailt = gemailt || r.gemailt;
@@ -513,7 +684,7 @@
     const tag = r.datum || keyOf(new Date());
     dialogOeffnen({
       typ: 'neu',
-      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, dauerEigen: false, dauer: '', taetigkeit: '', grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
+      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, dauerEigen: false, dauer: '', taetigkeit: '', kunde: null, kartei: true, grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
       felder: {},
     });
   }
@@ -571,6 +742,71 @@
       render();
     },
     'neu-laden': () => laden(),
+
+    /* Kundenkartei */
+    'kunde-waehlen': (i) => {
+      const k = M.vorschlaege && M.vorschlaege[Number(i)];
+      if (!k) return;
+      Object.assign(M.werte, formWerte(dlg.querySelector('form')));
+      M.werte.kunde = k;
+      M.werte.name = k.name;
+      if (k.tel) M.werte.tel = k.tel;
+      if (k.mail) M.werte.mail = k.mail;
+      M.vorschlaege = [];
+      dialogZeichnen();
+    },
+    'kunde-loesen': () => {
+      Object.assign(M.werte, formWerte(dlg.querySelector('form')));
+      M.werte.kunde = null; M.werte.name = ''; M.werte.tel = ''; M.werte.mail = '';
+      dialogZeichnen();
+      const el = dlg.querySelector('#f-name'); if (el) el.focus();
+    },
+    'gleiche-leistung': () => {
+      Object.assign(M.werte, formWerte(dlg.querySelector('form')));
+      M.werte.leistung = M.werte.kunde.letzter.leistungId;
+      M.werte.dauerEigen = false; M.werte.dauer = '';
+      dialogZeichnen();
+      toast('Leistung vom letzten Mal übernommen.');
+    },
+    'karte-neu': () => dialogOeffnen({ typ: 'karte', werte: { id: '', name: kartei.q && !/\d/.test(kartei.q) ? kartei.q : '', tel: '', mail: '', notiz: '' }, felder: {} }),
+    'karte-bearbeiten': () => { const k = karte.daten; dialogOeffnen({ typ: 'karte', werte: { id: k.id, name: k.name, tel: k.tel, mail: k.mail, notiz: k.notiz }, felder: {} }); },
+    'karte-termin': () => {
+      const k = karte.daten;
+      neuDialog({ tag: keyOf(new Date()), kunde: k, name: k.name, tel: k.tel, mail: k.mail,
+        leistung: k.letzter && k.letzter.leistungId ? k.letzter.leistungId : (D ? D.leistungen[0].id : ''),
+        person: k.letzter && k.letzter.person ? k.letzter.person : (D ? D.team[0].id : 'andrea') });
+    },
+    'karte-loeschen': async () => {
+      const k = karte.daten;
+      if (!window.confirm('Die Kundenkarte von ' + k.name + ' mit allen Notizen und Besuchen löschen? Termine im Kalender bleiben bestehen.')) return;
+      try {
+        await api('kunde-loeschen', {}, { id: k.id });
+        toast('Kundenkarte gelöscht.');
+        karte.daten = null; kartei.liste = null;
+        location.hash = '#/kunden';
+      } catch (e) { toast(e.message); }
+    },
+    'besuch-neu': () => {
+      const k = karte.daten;
+      dialogOeffnen({ typ: 'besuch', werte: { tag: '', person: (k.letzter && k.letzter.person) || (D ? D.team[0].id : 'andrea'), leistung: D ? D.leistungen[0].id : '', taetigkeit: '' }, felder: {} });
+    },
+    'besuch-weg': async (id) => {
+      if (!window.confirm('Diesen nachgetragenen Besuch entfernen?')) return;
+      try {
+        await api('besuch-entfernen', {}, { id: karte.daten.id, besuch: id });
+        karteLaden(karte.daten.id);
+      } catch (e) { toast(e.message); }
+    },
+    'als-stammkunde': async (arg) => {
+      const t = termin(arg);
+      try {
+        const r = await api('zuordnen', {}, { person: t.person, termin: t.id });
+        dialogSchliessen();
+        toast('Kundenkarte angelegt.');
+        location.hash = '#/kunde/' + r.kundeId;
+      } catch (e) { M.fehler = e.message; dialogZeichnen(); }
+    },
+    'schliessen-weiter': (arg, el) => { dialogSchliessen(); location.hash = el.getAttribute('href'); },
   };
 
   function klick(ev, root) {
@@ -588,7 +824,16 @@
     const el = ev.target;
     if (el.dataset.change === 'datum' && el.value) location.hash = '#/tag/' + el.value;
   });
+  // Kartei-Suche: beim Tippen filtern
+  let karteiTimer = null;
+  app.addEventListener('input', (ev) => {
+    if (ev.target.dataset.input !== 'kartei') return;
+    kartei.q = ev.target.value;
+    clearTimeout(karteiTimer);
+    karteiTimer = setTimeout(karteiLaden, 200);
+  });
   dlg.addEventListener('input', (ev) => {
+    if (M && M.typ === 'neu' && ev.target.name === 'name' && ev.target.type === 'text') vorschlaegeSuchen(ev.target.value);
     if (!['uhr', 'dauer'].includes(ev.target.name)) return;
     const form = ev.target.form, hinweis = dlg.querySelector('#ende-hinweis');
     if (!form || !hinweis) return;
@@ -639,10 +884,35 @@
     if (M && M.sendet) return;
     if (ev.target.dataset.submit === 'neu') neuSenden(false);
     if (ev.target.dataset.submit === 'verschieben') verschiebenSenden(false);
+    if (ev.target.dataset.submit === 'karte' || ev.target.dataset.submit === 'besuch') karteiSenden(ev.target);
   });
+
+  async function karteiSenden(form) {
+    Object.assign(M.werte, formWerte(form));
+    const f = M.werte;
+    M.sendet = true; M.fehler = ''; M.felder = {};
+    dialogZeichnen();
+    try {
+      if (M.typ === 'karte') {
+        const r = await api('kunde-speichern', {}, { id: f.id, name: f.name, tel: f.tel, mail: f.mail, notiz: f.notiz });
+        dialogSchliessen();
+        toast(f.id ? 'Gespeichert.' : 'Kundenkarte angelegt.');
+        kartei.liste = null;
+        if (location.hash === '#/kunde/' + r.id) karteLaden(r.id); else location.hash = '#/kunde/' + r.id;
+      } else {
+        await api('besuch-nachtragen', {}, { id: karte.daten.id, tag: f.tag, person: f.person, leistung: f.leistung === 'eigene' ? '' : f.leistung, taetigkeit: f.taetigkeit });
+        dialogSchliessen();
+        toast('Besuch nachgetragen.');
+        karteLaden(karte.daten.id);
+      }
+    } catch (e) {
+      M.sendet = false; M.fehler = e.message; M.felder = (e.data && e.data.felder) || {};
+      dialogZeichnen();
+    }
+  }
   window.addEventListener('hashchange', () => { window.scrollTo(0, 0); laden(); });
   // Alle 60 Sekunden still neu laden, wenn das Fenster sichtbar ist und kein Dialog offen ist
-  setInterval(() => { if (angemeldet && !M && document.visibilityState === 'visible' && route().view !== 'suche') laden(true); }, 60000);
+  setInterval(() => { if (angemeldet && !M && document.visibilityState === 'visible' && !['kunden', 'kunde'].includes(route().view)) laden(true); }, 60000);
   document.addEventListener('visibilitychange', () => { if (angemeldet && !M && document.visibilityState === 'visible') laden(true); });
 
   (async function start() {

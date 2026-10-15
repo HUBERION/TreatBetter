@@ -14,6 +14,7 @@ termin/
 ├── lib/
 │   ├── salon.php                   ← Leistungen, Team, Öffnungszeiten, Regeln
 │   ├── web.php                     ← gemeinsame Hilfsfunktionen, Einstellungen (Pausieren)
+│   ├── kunden.php                  ← Kundenkartei (daten/kunden.json)
 │   ├── zeit.php                    ← Feiertage, Öffnungszeiten, freie Zeiten (reine Funktionen)
 │   ├── kalender.php                ← Google Calendar API über Dienstkonto, Demo-Modus
 │   └── mail.php                    ← Bestätigung, Absage, Info an den Salon
@@ -112,3 +113,15 @@ Für Andrea und Pamela, am Salon-Handy und am Salon-PC: **andreazechmeister.at/t
 - **Einstellungen:** Online-Buchung je Person pausieren (`daten/einstellungen.json`). Die Kundenseite blendet pausierte Personen sofort aus.
 
 Nur das Dashboard liest Titel und Beschreibung von Terminen, und nur aus den beiden Buchungskalendern des Salons. Schreibende Anfragen brauchen zusätzlich den Kopf `X-Verwaltung: 1`.
+
+## Kundenkartei
+
+Stammkund:innen im Dashboard unter **Kunden**. Die Kartei liegt als `daten/kunden.json` im privaten Ordner auf dem Server (nicht bei Google), Änderungen unter Dateisperre.
+
+- **Karte:** Name, Telefon, E-Mail, Notiz (Arbeitshinweise wie Farbrezeptur; Hinweis im Dashboard: keine Gesundheitsdaten) und Besuche.
+- **Besuche:** gehören zu einem Termin im Kalender (`terminId`, werden beim Verschieben mitgezogen und beim Absagen entfernt) oder wurden von der Papierkarte **nachgetragen** (nur Vergangenheit).
+- **Eintragen:** Beim Tippen des Namens erscheinen passende Karten; nach der Auswahl stehen Telefon, E-Mail und „Zuletzt: …“ da, „Gleiche Leistung“ übernimmt die letzte Leistung. Für neue Personen ist „In der Kundenkartei speichern“ vorausgewählt.
+- **Termin-Detail:** „Kundenkarte“ bzw. „Als Stammkunde speichern“.
+- **Online-Buchungen** werden automatisch einer Karte zugeordnet, wenn E-Mail oder Telefonnummer übereinstimmt (Telefon wird vereinheitlicht: `0664…` = `+43664…`). Neue Online-Kund:innen bekommen keine Karte von selbst.
+- **Löschen:** `aufgaben.php` löscht Karten, deren letzter Besuch (bzw. Anlage) mehr als 3 Jahre zurückliegt. Die Karte zeigt das Löschdatum an. Von Hand löschen geht jederzeit.
+- Die Datenschutzerklärung der Homepage hat dazu den Abschnitt „Kundenkartei“.

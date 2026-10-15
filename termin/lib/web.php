@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/kalender.php';
 require_once __DIR__ . '/mail.php';
+require_once __DIR__ . '/kunden.php';
 
 date_default_timezone_set('Europe/Vienna');
 

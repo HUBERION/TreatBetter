@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/kalender.php';
 require_once __DIR__ . '/lib/mail.php';
+require_once __DIR__ . '/lib/kunden.php';
 
 date_default_timezone_set('Europe/Vienna');
 
@@ -69,7 +70,7 @@ foreach (TEAM as $p) {
                 'description' => 'Online gebucht. Kundendaten nach ' . REGELN['aufbewahrung'] . ' Monaten automatisch entfernt.',
                 'extendedProperties' => ['private' => [
                     'tb' => '1', 'leistung' => $priv['leistung'] ?? '', 'taetigkeit' => $priv['taetigkeit'] ?? '', 'anonym' => '1',
-                    'name' => '', 'mail' => '', 'tel' => '', 'tok' => '', 'erinnert' => $priv['erinnert'] ?? '',
+                    'name' => '', 'mail' => '', 'tel' => '', 'tok' => '', 'kunde' => '', 'erinnert' => $priv['erinnert'] ?? '',
                 ]],
             ]);
             $geloescht++;
@@ -80,11 +81,21 @@ foreach (TEAM as $p) {
     }
 }
 
+/* 3. Kundenkarten löschen, die seit 3 Jahren keinen Besuch hatten */
+$karten = 0;
+try {
+    $karten = karteiAufraeumen($cfg, $jetzt);
+} catch (Throwable $e) {
+    $fehler++;
+    fwrite(STDERR, "Kartei: " . $e->getMessage() . "
+");
+}
+
 // Alte Fehlerprotokolle kurz halten
 $log = $cfg['daten'] . '/fehler.log';
 if (is_file($log) && filesize($log) > 200000) file_put_contents($log, substr((string) file_get_contents($log), -100000));
 
-$zeile = date('Y-m-d H:i') . " Erinnerungen: $erinnert, Kundendaten entfernt: $geloescht" . ($fehler ? ", Fehler: $fehler" : '');
+$zeile = date('Y-m-d H:i') . " Erinnerungen: $erinnert, Kundendaten entfernt: $geloescht, Karten gelöscht: $karten" . ($fehler ? ", Fehler: $fehler" : '');
 @file_put_contents($cfg['daten'] . '/aufgaben.log', $zeile . "\n", FILE_APPEND | LOCK_EX);
 if ($web && $fehler) http_response_code(500);
 echo $zeile . "\n";

@@ -466,3 +466,5 @@ dialog.modal::backdrop { background: rgba(24, 22, 29, 0.45); }
   .side .side-link.cta { position: fixed; right: 16px; bottom: 16px; z-index: 20; min-height: 56px; margin: 0; padding: 0 22px; border-radius: 999px; box-shadow: 0 8px 24px rgba(90, 30, 108, 0.35); }
   .main { padding-bottom: 96px; }
 }
+.vorschlaege { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.vorschlaege:empty { display: none; }

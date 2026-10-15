@@ -95,6 +95,8 @@ try {
         $ende = $ts + $l['min'] * 60;
         $token = neuerToken();
         $voll = leistungsname($l);
+        // Stammkundin? Dann wird der Besuch ihrer Karte zugeordnet (E-Mail oder Telefon stimmt überein)
+        $kundeId = karteZuKontakt(karteiLesen($cfg), $mail, $tel) ?? '';
         $id = terminEintragen($cfg, $p['id'], [
             'summary' => $name . ' – ' . $voll,
             'description' => "Online gebucht\nLeistung: $voll\nTelefon: $tel\nE-Mail: $mail\n\n"
@@ -103,10 +105,11 @@ try {
             'end' => ['dateTime' => rfc3339($ende), 'timeZone' => 'Europe/Vienna'],
             'transparency' => 'opaque',
             'extendedProperties' => ['private' => [
-                'tb' => '1', 'tok' => stornoHash($token), 'leistung' => $l['id'], 'name' => $name, 'mail' => $mail, 'tel' => $tel,
+                'tb' => '1', 'tok' => stornoHash($token), 'leistung' => $l['id'], 'name' => $name, 'mail' => $mail, 'tel' => $tel, 'kunde' => $kundeId,
             ]],
         ]);
         flock($sperre, LOCK_UN);
+        if ($kundeId !== '') karteiBesuchSetzen($cfg, $kundeId, $id, $p['id'], $ts, $voll, $l['id'], 'online');
 
         $buchung = [
             'id' => $id, 'beginn' => $ts, 'ende' => $ende, 'leistung' => $voll, 'person' => $p['name'],
@@ -142,6 +145,7 @@ try {
         if ($a === 'termin') antwort(200, ['termin' => $info]);
         if (!$info['stornierbar']) antwort(409, ['fehler' => 'Online absagen ist nicht mehr möglich. Bitte ruf uns an: ' . telefonText()]);
         terminLoeschen($cfg, $treffer['person'], (string) $t['id']);
+        karteiBesuchEntfernen($cfg, (string) $t['id']);
         try {
             mailStorno($cfg, ['id' => (string) $t['id'], 'folge' => (int) ($priv['folge'] ?? 0), 'beginn' => $beginn, 'ende' => $ende, 'leistung' => $info['leistung'], 'person' => $info['person'],
                 'name' => $priv['name'] ?? '', 'mail' => $priv['mail'] ?? '']);

@@ -77,7 +77,7 @@ function adminSicht(array $t, string $person): array
         'notiz' => $art === 'block' || $art === 'kalender' ? (string) ($t['description'] ?? '') : '',
         'name' => (string) ($priv['name'] ?? ''), 'tel' => (string) ($priv['tel'] ?? ''), 'mail' => (string) ($priv['mail'] ?? ''),
         'leistung' => leistungAusTermin($priv), 'leistungId' => $l['id'] ?? '',
-        'anonym' => !empty($priv['anonym']), 'erinnert' => !empty($priv['erinnert']),
+        'anonym' => !empty($priv['anonym']), 'erinnert' => !empty($priv['erinnert']), 'kunde' => (string) ($priv['kunde'] ?? ''),
         'blockiert' => $ganztags || ($t['transparency'] ?? 'opaque') !== 'transparent',
     ];
 }
@@ -179,6 +179,14 @@ try {
             $ende = $beginn + $dauer * 60;
             if (!$trotzdem && ($k = konflikte($cfg, $p['id'], $beginn, $ende))) antwort(409, ['konflikt' => $k, 'fehler' => 'Zu dieser Zeit ist schon etwas eingetragen.']);
             $voll = $eigene ? $taetigkeit : leistungsname($l);
+            // Kundenkarte: bestehende wählen oder auf Wunsch neu anlegen
+            $kundeId = (string) ($d['kundeId'] ?? '');
+            if ($kundeId !== '' && karteIndex(karteiLesen($cfg), $kundeId) === null) $kundeId = '';
+            if ($kundeId === '' && !empty($d['kartei'])) {
+                $karte = neueKarte($name, $tel, $mail, '');
+                karteiAendern($cfg, function (array &$liste) use ($karte) { $liste[] = $karte; });
+                $kundeId = $karte['id'];
+            }
             $token = $mail !== '' ? neuerToken() : '';
             $id = terminEintragen($cfg, $p['id'], [
                 'summary' => $name . ' – ' . $voll,
@@ -189,9 +197,10 @@ try {
                 'extendedProperties' => ['private' => [
                     'tb' => '1', 'quelle' => 'telefon', 'tok' => $token !== '' ? stornoHash($token) : '',
                     'leistung' => $eigene ? 'eigene' : $l['id'], 'taetigkeit' => $eigene ? $taetigkeit : '',
-                    'name' => $name, 'mail' => $mail, 'tel' => $tel,
+                    'name' => $name, 'mail' => $mail, 'tel' => $tel, 'kunde' => $kundeId,
                 ]],
             ]);
+            if ($kundeId !== '') karteiBesuchSetzen($cfg, $kundeId, $id, $p['id'], $beginn, $voll, $eigene ? '' : $l['id'], 'telefon');
             $gemailt = false;
             if ($mail !== '' && !empty($d['mailSenden'])) {
                 try {
@@ -263,6 +272,7 @@ try {
             ])];
         }
         terminUmziehen($cfg, $p['id'], $nach['id'], $s['id']);
+        if ($s['kunde'] !== '') karteiBesuchSetzen($cfg, $s['kunde'], $s['id'], $nach['id'], $beginn, $s['leistung'], $s['leistungId'], $s['art']);
         terminAendern($cfg, $nach['id'], $s['id'], $aenderung);
         $gemailt = false;
         if (!empty($d['mail']) && $token !== '') {
@@ -284,6 +294,7 @@ try {
         $t = terminHolen($cfg, $p['id'], (string) ($d['id'] ?? '')) ?? antwort(404, ['fehler' => 'Der Termin wurde nicht gefunden. Vielleicht ist er schon gelöscht.']);
         $s = adminSicht($t, $p['id']);
         terminLoeschen($cfg, $p['id'], $s['id']);
+        karteiBesuchEntfernen($cfg, $s['id']);
         $gemailt = false;
         if (!empty($d['mail']) && $s['mail'] !== '' && $s['beginn'] > time()) {
             try {
@@ -320,6 +331,107 @@ try {
         }
         usort($treffer, fn($x, $y) => $y['beginn'] <=> $x['beginn']);
         antwort(200, ['treffer' => array_slice($treffer, 0, 50), 'jetzt' => time()]);
+    }
+
+    /* ---------- Kundenkartei ---------- */
+
+    if ($a === 'kunden' && $methode === 'GET') {
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $liste = karteiLesen($cfg);
+        $treffer = $q === '' ? $liste : karteSuchen($liste, $q);
+        if ($q === '') usort($treffer, fn($x, $y) => strcoll($x['name'], $y['name']));
+        $jetzt = time();
+        antwort(200, ['kunden' => array_map(fn($k) => karteKurz($k, $jetzt), array_slice($treffer, 0, $q === '' ? 500 : 20)), 'gesamt' => count($liste)]);
+    }
+
+    if ($a === 'kunde' && $methode === 'GET') {
+        $liste = karteiLesen($cfg);
+        $i = karteIndex($liste, (string) ($_GET['id'] ?? ''));
+        if ($i === null) antwort(404, ['fehler' => 'Diese Kundenkarte gibt es nicht mehr.']);
+        antwort(200, ['kunde' => karteVoll($liste[$i], time())]);
+    }
+
+    if ($a === 'kunde-speichern' && $methode === 'POST') {
+        $d = eingabe();
+        [$name, $mail, $tel, $f] = pruefeKunde($d, false);
+        $notiz = mb_substr(trim((string) ($d['notiz'] ?? '')), 0, 1000);
+        if ($f) antwort(400, ['fehler' => 'Bitte die markierten Felder prüfen.', 'felder' => $f]);
+        $id = (string) ($d['id'] ?? '');
+        $id = karteiAendern($cfg, function (array &$liste) use ($id, $name, $mail, $tel, $notiz) {
+            if ($id === '') {
+                $k = neueKarte($name, $tel, $mail, $notiz);
+                $liste[] = $k;
+                return $k['id'];
+            }
+            $i = karteIndex($liste, $id);
+            if ($i === null) return null;
+            $liste[$i] = array_merge($liste[$i], ['name' => $name, 'tel' => $tel, 'mail' => $mail, 'notiz' => $notiz]);
+            return $id;
+        });
+        if ($id === null) antwort(404, ['fehler' => 'Diese Kundenkarte gibt es nicht mehr.']);
+        antwort(200, ['ok' => true, 'id' => $id]);
+    }
+
+    if ($a === 'kunde-loeschen' && $methode === 'POST') {
+        $id = (string) (eingabe()['id'] ?? '');
+        karteiAendern($cfg, function (array &$liste) use ($id) {
+            $liste = array_values(array_filter($liste, fn($k) => $k['id'] !== $id));
+        });
+        antwort(200, ['ok' => true]);
+    }
+
+    if ($a === 'besuch-nachtragen' && $methode === 'POST') {
+        $d = eingabe();
+        $p = personPruefen((string) ($d['person'] ?? ''));
+        try { $tagTs = tag((string) ($d['tag'] ?? ''))->setTime(12, 0)->getTimestamp(); } catch (InvalidArgumentException $e) { antwort(400, ['fehler' => 'Bitte ein gültiges Datum angeben.']); }
+        if ($tagTs > time()) antwort(400, ['fehler' => 'Nachtragen geht nur für vergangene Besuche. Für kommende bitte einen Termin eintragen.']);
+        $l = leistung((string) ($d['leistung'] ?? ''));
+        $text = $l ? leistungsname($l) : trim(preg_replace('/\s+/u', ' ', (string) ($d['taetigkeit'] ?? '')));
+        if (mb_strlen($text) < 2 || mb_strlen($text) > 60) antwort(400, ['fehler' => 'Bitte angeben, was gemacht wurde.']);
+        $id = (string) ($d['id'] ?? '');
+        $ok = karteiAendern($cfg, function (array &$liste) use ($id, $p, $tagTs, $text, $l) {
+            $i = karteIndex($liste, $id);
+            if ($i === null) return false;
+            $liste[$i]['besuche'][] = ['id' => bin2hex(random_bytes(6)), 'terminId' => '', 'person' => $p['id'], 'beginn' => $tagTs,
+                'leistung' => $text, 'leistungId' => $l['id'] ?? '', 'quelle' => 'nachgetragen'];
+            return true;
+        });
+        if (!$ok) antwort(404, ['fehler' => 'Diese Kundenkarte gibt es nicht mehr.']);
+        antwort(200, ['ok' => true]);
+    }
+
+    if ($a === 'besuch-entfernen' && $methode === 'POST') {
+        $d = eingabe();
+        $id = (string) ($d['id'] ?? '');
+        $besuch = (string) ($d['besuch'] ?? '');
+        karteiAendern($cfg, function (array &$liste) use ($id, $besuch) {
+            $i = karteIndex($liste, $id);
+            if ($i === null) return;
+            // Nur nachgetragene Besuche; Besuche zu Terminen verschwinden mit dem Absagen des Termins
+            $liste[$i]['besuche'] = array_values(array_filter($liste[$i]['besuche'], fn($b) => $b['id'] !== $besuch || !empty($b['terminId'])));
+        });
+        antwort(200, ['ok' => true]);
+    }
+
+    /* Bestehenden Termin einer (neuen oder bestehenden) Kundenkarte zuordnen. */
+    if ($a === 'zuordnen' && $methode === 'POST') {
+        $d = eingabe();
+        $p = personPruefen((string) ($d['person'] ?? ''));
+        $t = terminHolen($cfg, $p['id'], (string) ($d['termin'] ?? '')) ?? antwort(404, ['fehler' => 'Der Termin wurde nicht gefunden.']);
+        $s = adminSicht($t, $p['id']);
+        if ($s['art'] !== 'online' && $s['art'] !== 'telefon') antwort(400, ['fehler' => 'Nur Kundentermine lassen sich zuordnen.']);
+        $kundeId = (string) ($d['kundeId'] ?? '');
+        if ($kundeId === '') {
+            $karte = neueKarte($s['name'], $s['tel'], $s['mail'], '');
+            karteiAendern($cfg, function (array &$liste) use ($karte) { $liste[] = $karte; });
+            $kundeId = $karte['id'];
+        } elseif (karteIndex(karteiLesen($cfg), $kundeId) === null) {
+            antwort(404, ['fehler' => 'Diese Kundenkarte gibt es nicht mehr.']);
+        }
+        $priv = $t['extendedProperties']['private'] ?? [];
+        terminAendern($cfg, $p['id'], $s['id'], ['extendedProperties' => ['private' => array_merge($priv, ['kunde' => $kundeId])]]);
+        karteiBesuchSetzen($cfg, $kundeId, $s['id'], $p['id'], $s['beginn'], $s['leistung'], $s['leistungId'], $s['art']);
+        antwort(200, ['ok' => true, 'kundeId' => $kundeId]);
     }
 
     if ($a === 'pause' && $methode === 'POST') {
