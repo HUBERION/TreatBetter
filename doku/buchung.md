@@ -76,10 +76,17 @@ Für die Seite eine Konfiguration mit `'modus' => 'demo'` anlegen, `TREATBETTER_
 - Storno-Link: zufälliger Schlüssel im Teil nach `#`, der nicht in Server-Protokollen landet. Im Kalender steht nur ein SHA-256-Prüfwert.
 - Gleichzeitige Buchungen werden mit einer Dateisperre nacheinander geprüft, keine Doppelbuchung.
 - Missbrauchsbremse: höchstens 5 Buchungen und 30 Storno-Aufrufe je Stunde und IP-Adresse (IP nur gehasht mit Tagessalz, nach einem Tag gelöscht), dazu ein unsichtbares Feld gegen Spam-Programme.
-- **Vor dem Livegang:** `datenschutz.html` der Homepage um die Online-Buchung ergänzen (welche Daten, Google als Auftragsverarbeiter, Speicherdauer).
+- Die Datenschutzerklärung der Homepage hat einen Abschnitt „Online-Terminbuchung“ (Daten, Google Kalender, Löschung nach 12 Monaten). Erst beim Livegang hochladen.
+
+## Tägliche Aufgaben (`aufgaben.php`)
+
+Ein Cronjob bei IONOS startet täglich, z. B. um 08:00, `php termin/aufgaben.php`. Über den Browser ist das Skript nicht aufrufbar.
+
+1. **Erinnerung:** E-Mail an alle, die morgen einen Online-Termin haben. Danach wird der Termin mit `erinnert=1` markiert, damit keine zweite E-Mail kommt.
+2. **Aufräumen:** Bei Online-Terminen, die länger als 12 Monate (`REGELN['aufbewahrung']`) zurückliegen, werden Name, E-Mail, Telefon und Storno-Prüfwert entfernt. Titel wird „Online-Termin – Leistung“.
 
 ## Noch offen
 
-- Erinnerungs-E-Mail am Vortag (Cronjob bei IONOS)
-- Automatisches Löschen alter Kundendaten aus vergangenen Terminen
-- Datenschutzerklärung ergänzen, Upload auf IONOS, Test mit echtem Kalender
+- Upload auf IONOS, Konfiguration und Schlüssel im privaten Ordner, Cronjob einrichten
+- Test mit dem echten Kalender
+- Beim Livegang: neue `datenschutz.html` der Homepage hochladen, Buchungsknopf auf der Homepage ergänzen

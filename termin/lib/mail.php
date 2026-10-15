@@ -105,6 +105,21 @@ function mailBestaetigung(array $cfg, array $b): void
     }
 }
 
+function mailErinnerung(array $cfg, array $b): void
+{
+    mailSenden($cfg, $b['mail'], 'Erinnerung: dein Termin morgen um ' . hhmm($b['beginn']) . ' Uhr',
+        "Hallo {$b['name']},\n\n"
+        . "wir freuen uns auf dich! Zur Erinnerung:\n\n"
+        . "  Wann:   " . datumLang($b['beginn']) . ', ' . hhmm($b['beginn']) . " Uhr\n"
+        . "  Was:    {$b['leistung']}\n"
+        . "  Bei:    {$b['person']}\n"
+        . "  Wo:     " . SALON['name'] . ', ' . SALON['strasse'] . ', ' . SALON['ort'] . "\n\n"
+        . "Parkplätze gibt es im Innenhof, die Einfahrt ist über die Rosentaler Straße.\n"
+        . "Bezahlt wird im Salon, bar oder mit Karte.\n\n"
+        . "Falls du nicht kommen kannst, ruf uns bitte an: " . telefonText() . "\n\n"
+        . "Bis morgen!\n" . SALON['name'] . "\n");
+}
+
 function mailStorno(array $cfg, array $b): void
 {
     mailSenden($cfg, $b['mail'], 'Termin abgesagt: ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr',

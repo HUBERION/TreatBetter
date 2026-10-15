@@ -55,6 +55,7 @@ const REGELN = [
     'vorlauf'   => 240,  // frühestens 4 Stunden ab jetzt
     'monate'    => 3,    // bis 3 Monate im Voraus
     'storno'    => 24,   // kostenlos stornierbar bis 24 Stunden vorher
+    'aufbewahrung' => 12, // Monate: danach Name, E-Mail und Telefon aus vergangenen Terminen entfernen
 ];
 
 function leistung(string $id): ?array

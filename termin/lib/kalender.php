@@ -90,6 +90,40 @@ function buchungFinden(array $cfg, string $hash): ?array
     return null;
 }
 
+/* Eigene Online-Buchungen einer Person, die in [von, bis) beginnen. */
+function eigeneBuchungen(array $cfg, string $person, int $von, int $bis): array
+{
+    $termine = $cfg['modus'] === 'demo'
+        ? demoTermine($cfg, $person)
+        : googleTermine($cfg, kalenderId($cfg, $person), ['privateExtendedProperty' => 'tb=1', 'timeMin' => rfc3339($von), 'timeMax' => rfc3339($bis)]);
+    return array_values(array_filter($termine, function ($t) use ($von, $bis) {
+        if (($t['status'] ?? '') === 'cancelled' || !isset($t['extendedProperties']['private']['tb'])) return false;
+        $b = terminZeit($t)[0];
+        return $b >= $von && $b < $bis;
+    }));
+}
+
+/* Termin teilweise ändern. Private Zusatzfelder immer vollständig mitgeben,
+   zu löschende Felder als leere Zeichenkette. */
+function terminAendern(array $cfg, string $person, string $id, array $aenderung): void
+{
+    if ($cfg['modus'] === 'demo') {
+        $alle = demoLaden($cfg);
+        foreach ($alle[$person] ?? [] as $i => $t) {
+            if ($t['id'] !== $id) continue;
+            if (isset($aenderung['extendedProperties']['private'])) {
+                $alle[$person][$i]['extendedProperties']['private'] = array_merge(
+                    $t['extendedProperties']['private'] ?? [], $aenderung['extendedProperties']['private']);
+                unset($aenderung['extendedProperties']);
+            }
+            $alle[$person][$i] = array_merge($alle[$person][$i], $aenderung);
+        }
+        demoSpeichern($cfg, $alle);
+        return;
+    }
+    googleAnfrage($cfg, 'PATCH', '/calendars/' . rawurlencode(kalenderId($cfg, $person)) . '/events/' . rawurlencode($id), [], $aenderung);
+}
+
 /* Anzahl eigener Buchungen einer Person an einem Tag (für die Verteilung bei „Beliebig“). */
 function buchungenAmTag(array $cfg, string $person, string $key): int
 {
@@ -110,14 +144,15 @@ function googleTermine(array $cfg, string $kalender, array $filter): array
     $q = $filter + [
         'singleEvents' => 'true',
         'maxResults' => '2500',
-        'fields' => 'items(id,status,start,end,transparency,summary,extendedProperties),nextPageToken',
+        // Titel, Beschreibung, Ort und Teilnehmer werden gar nicht erst abgefragt
+        'fields' => 'items(id,status,start,end,transparency,extendedProperties),nextPageToken',
     ];
     $alle = [];
     do {
         $r = googleAnfrage($cfg, 'GET', '/calendars/' . rawurlencode($kalender) . '/events', $q);
         foreach ($r['items'] ?? [] as $t) {
-            // Titel nur bei eigenen Buchungen behalten, bei allen anderen Terminen sofort verwerfen
-            if (!isset($t['extendedProperties']['private']['tb'])) unset($t['summary']);
+            // Zusatzfelder fremder Termine (z. B. von anderen Apps) verwerfen
+            if (!isset($t['extendedProperties']['private']['tb'])) unset($t['extendedProperties']);
             $alle[] = $t;
         }
         $q['pageToken'] = $r['nextPageToken'] ?? null;
