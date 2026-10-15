@@ -19,14 +19,15 @@ Erster Salon: **Friseur Andrea Zechmeister**, August-Jaksch-Straße 1, 9020 Klag
 
 ## Aktueller Stand
 
-Es gibt **noch kein Backend**. Das Repository enthält eine klickbare Testversion und einen Design-Entwurf:
+Die echte Online-Buchung ist **in Arbeit** (`termin/`, PHP auf IONOS, noch nicht live). Daneben gibt es die klickbare Testversion und einen Design-Entwurf:
 
 | Teil | Ordner | Zustand |
 |---|---|---|
 | Testversion | [`docs/`](docs/) | Läuft auf GitHub Pages. Reines HTML, CSS und JavaScript, kein Build-Schritt, keine Abhängigkeiten. Alle Termine sind Beispieldaten, Eingaben bleiben im `localStorage` des Browsers. |
 | Design-Entwurf | [`mockup/`](mockup/) | Quelldateien eines Claude-Design-Canvas (`.dc.html`). Laufen nicht eigenständig, nur Referenz für das Aussehen. **Für neue Arbeit `docs/` ändern, nicht `mockup/`.** |
 | Salon-Homepage | [`homepage/`](homepage/) | Visitenkarten-Website des Salons zum Hochladen auf IONOS. Reines HTML und CSS, siehe [`doku/homepage.md`](doku/homepage.md). |
-| Dokumentation | [`doku/`](doku/) | Architektur, Fachlogik, Roadmap und Homepage. |
+| Online-Buchung | [`termin/`](termin/) | Echte Buchung mit Google Kalender, PHP ohne Datenbank, läuft später unter andreazechmeister.at/termin/. Siehe [`doku/buchung.md`](doku/buchung.md). Hier sind PHP-Dateien erlaubt; Schlüssel und Konfiguration liegen nur auf dem Server. |
+| Dokumentation | [`doku/`](doku/) | Architektur, Fachlogik, Roadmap, Homepage und Buchung. |
 
 Live: **https://huberion.github.io/TreatBetter/docs/**
 Sobald in den Pages-Einstellungen der Ordner `/docs` gewählt ist, liegt die App direkt unter https://huberion.github.io/TreatBetter/.
@@ -54,6 +55,7 @@ Die Testversion hat zwei Bereiche:
 ├── doku/
 │   ├── architektur.md     ← Aufbau von docs/app.js, Zustand, Routing, Erweitern
 │   ├── fachlogik.md       ← freie Termine, Öffnungszeiten, Feiertage, Google-Kalender-Termine, Salondaten
+│   ├── buchung.md         ← echte Online-Buchung: Aufbau, Regeln, Google, Konfiguration
 │   ├── homepage.md        ← Salon-Homepage, Upload auf IONOS
 │   └── roadmap.md         ← Weg zur echten Version, offene Fragen an den Salon
 ├── docs/                  ← Testversion, wird von GitHub Pages ausgeliefert
@@ -64,6 +66,7 @@ Die Testversion hat zwei Bereiche:
 │   ├── favicon.svg
 │   └── .nojekyll          ← verhindert die Jekyll-Verarbeitung auf GitHub Pages
 ├── homepage/              ← Salon-Homepage für IONOS (index, impressum, datenschutz, .htaccess)
+├── termin/                ← echte Online-Buchung (PHP, Google Kalender), siehe doku/buchung.md
 └── mockup/                ← Design-Canvas-Quellen (nur Referenz)
 ```
 
