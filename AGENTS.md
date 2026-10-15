@@ -25,7 +25,8 @@ Es gibt **noch kein Backend**. Das Repository enthält eine klickbare Testversio
 |---|---|---|
 | Testversion | [`docs/`](docs/) | Läuft auf GitHub Pages. Reines HTML, CSS und JavaScript, kein Build-Schritt, keine Abhängigkeiten. Alle Termine sind Beispieldaten, Eingaben bleiben im `localStorage` des Browsers. |
 | Design-Entwurf | [`mockup/`](mockup/) | Quelldateien eines Claude-Design-Canvas (`.dc.html`). Laufen nicht eigenständig, nur Referenz für das Aussehen. **Für neue Arbeit `docs/` ändern, nicht `mockup/`.** |
-| Dokumentation | [`doku/`](doku/) | Architektur, Fachlogik und Roadmap. |
+| Salon-Homepage | [`homepage/`](homepage/) | Visitenkarten-Website des Salons zum Hochladen auf IONOS. Reines HTML und CSS, siehe [`doku/homepage.md`](doku/homepage.md). |
+| Dokumentation | [`doku/`](doku/) | Architektur, Fachlogik, Roadmap und Homepage. |
 
 Live: **https://huberion.github.io/TreatBetter/docs/**
 Sobald in den Pages-Einstellungen der Ordner `/docs` gewählt ist, liegt die App direkt unter https://huberion.github.io/TreatBetter/.
@@ -53,6 +54,7 @@ Die Testversion hat zwei Bereiche:
 ├── doku/
 │   ├── architektur.md     ← Aufbau von docs/app.js, Zustand, Routing, Erweitern
 │   ├── fachlogik.md       ← freie Termine, Öffnungszeiten, Feiertage, Google-Kalender-Termine, Salondaten
+│   ├── homepage.md        ← Salon-Homepage, Upload auf IONOS
 │   └── roadmap.md         ← Weg zur echten Version, offene Fragen an den Salon
 ├── docs/                  ← Testversion, wird von GitHub Pages ausgeliefert
 │   ├── index.html         ← Gerüst, lädt style.css und app.js
@@ -61,6 +63,7 @@ Die Testversion hat zwei Bereiche:
 │   ├── logo.jpg           ← Logo des Salons, Quelle der Akzentfarben
 │   ├── favicon.svg
 │   └── .nojekyll          ← verhindert die Jekyll-Verarbeitung auf GitHub Pages
+├── homepage/              ← Salon-Homepage für IONOS (index, impressum, datenschutz, .htaccess)
 └── mockup/                ← Design-Canvas-Quellen (nur Referenz)
 ```
 
