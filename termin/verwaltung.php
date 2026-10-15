@@ -413,6 +413,93 @@ try {
         antwort(200, ['ok' => true]);
     }
 
+    /* ---------- Excel: Vorlage, Export, Import ---------- */
+
+    if (($a === 'vorlage' || $a === 'export') && $methode === 'GET') {
+        require_once __DIR__ . '/lib/tabelle.php';
+        $kopf = ['Name', 'Telefon', 'E-Mail', 'Letzter Besuch', 'Letzte Leistung', 'Bei', 'Notiz'];
+        if ($a === 'vorlage') {
+            $zeilen = [$kopf,
+                ['Maria Muster', '0664 123 45 67', 'maria@beispiel.at', '12.09.2026', 'Damen – Waschen, Schneiden & Föhnen', 'Andrea', 'Farbe 6/0, mag es kürzer'],
+                ['Franz Beispiel', '0463 12 34 56', '', '03.10.2026', 'Herren – Trockenhaarschnitt', 'Pamela', ''],
+            ];
+            $datei = 'Kundenkartei-Vorlage.xlsx';
+        } else {
+            $jetzt = time();
+            $zeilen = [array_merge($kopf, ['Nächster Termin', 'Besuche', 'Wird gelöscht am'])];
+            $liste = karteiLesen($cfg);
+            usort($liste, fn($x, $y) => strcoll($x['name'], $y['name']));
+            $datum = fn(?array $b) => $b ? (new DateTimeImmutable($b['tag']))->format('d.m.Y') : '';
+            foreach ($liste as $k) {
+                $v = karteVoll($k, $jetzt);
+                $zeilen[] = [$v['name'], $v['tel'], $v['mail'], $datum($v['letzter']), $v['letzter']['leistung'] ?? '', $v['letzter']['personName'] ?? '',
+                    $v['notiz'], $v['naechster'] ? $datum($v['naechster']) . ($v['naechster']['uhr'] ? ' ' . $v['naechster']['uhr'] : '') : '', (string) $v['anzahl'],
+                    (new DateTimeImmutable($v['loeschenAm']))->format('d.m.Y')];
+            }
+            $datei = 'Kundenkartei-' . date('Y-m-d') . '.xlsx';
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $datei . '"');
+        echo xlsxSchreiben($zeilen, 'Kunden', [26, 18, 28, 15, 38, 10, 40, 18, 9, 16]);
+        exit;
+    }
+
+    if ($a === 'import-pruefen' && $methode === 'POST') {
+        require_once __DIR__ . '/lib/tabelle.php';
+        $f = $_FILES['datei'] ?? null;
+        if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK) antwort(400, ['fehler' => 'Bitte eine Datei auswählen.']);
+        if ($f['size'] > 5 * 1024 * 1024) antwort(400, ['fehler' => 'Die Datei ist zu groß (höchstens 5 MB).']);
+        try {
+            $tabelle = tabelleLesen((string) file_get_contents($f['tmp_name']), (string) $f['name']);
+        } catch (Throwable $e) {
+            antwort(400, ['fehler' => 'Die Datei konnte nicht gelesen werden. ' . $e->getMessage()]);
+        }
+        antwort(200, importAuswerten($cfg, $tabelle));
+    }
+
+    if ($a === 'import-uebernehmen' && $methode === 'POST') {
+        $d = eingabe(2 * 1024 * 1024);
+        $zeilen = array_slice(is_array($d['zeilen'] ?? null) ? $d['zeilen'] : [], 0, 3000);
+        // Noch einmal prüfen, damit nur saubere Daten übernommen werden
+        $geprueft = importAuswerten($cfg, array_merge([['Name', 'Telefon', 'E-Mail', 'Letzter Besuch', 'Letzte Leistung', 'Bei', 'Notiz']],
+            array_map(fn($z) => [(string) ($z['name'] ?? ''), (string) ($z['tel'] ?? ''), (string) ($z['mail'] ?? ''), (string) ($z['datum'] ?? ''),
+                (string) ($z['leistung'] ?? ''), (string) ($z['personName'] ?? ''), (string) ($z['notiz'] ?? '')], $zeilen)));
+        $ergebnis = karteiAendern($cfg, function (array &$liste) use ($geprueft) {
+            $neu = 0; $ergaenzt = 0;
+            foreach ($geprueft['zeilen'] as $z) {
+                if ($z['status'] === 'fehler') continue;
+                $kid = importPassendeKarte($liste, $z);
+                if ($kid === null) {
+                    $k = neueKarte($z['name'], $z['tel'], $z['mail'], $z['notiz']);
+                    $liste[] = $k;
+                    $i = count($liste) - 1;
+                    $neu++;
+                } else {
+                    $i = karteIndex($liste, $kid);
+                    // Nur leere Felder ergänzen, Notiz anhängen, nichts überschreiben
+                    if (($liste[$i]['tel'] ?? '') === '' && $z['tel'] !== '') $liste[$i]['tel'] = $z['tel'];
+                    if (($liste[$i]['mail'] ?? '') === '' && $z['mail'] !== '') $liste[$i]['mail'] = $z['mail'];
+                    if ($z['notiz'] !== '' && !str_contains($liste[$i]['notiz'] ?? '', $z['notiz'])) {
+                        $liste[$i]['notiz'] = mb_substr(trim(($liste[$i]['notiz'] ?? '') . "\n" . $z['notiz']), 0, 1000);
+                    }
+                    $ergaenzt++;
+                }
+                if ($z['beginn']) {
+                    $schonDa = false;
+                    foreach ($liste[$i]['besuche'] as $b) {
+                        if (abs($b['beginn'] - $z['beginn']) < 86400) $schonDa = true;
+                    }
+                    if (!$schonDa) {
+                        $liste[$i]['besuche'][] = ['id' => bin2hex(random_bytes(6)), 'terminId' => '', 'person' => $z['person'],
+                            'beginn' => $z['beginn'], 'leistung' => $z['leistungText'], 'leistungId' => $z['leistungId'], 'quelle' => 'nachgetragen'];
+                    }
+                }
+            }
+            return ['neu' => $neu, 'ergaenzt' => $ergaenzt];
+        });
+        antwort(200, ['ok' => true] + $ergebnis);
+    }
+
     /* Bestehenden Termin einer (neuen oder bestehenden) Kundenkarte zuordnen. */
     if ($a === 'zuordnen' && $methode === 'POST') {
         $d = eingabe();

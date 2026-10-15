@@ -177,3 +177,126 @@ function karteiAufraeumen(array $cfg, int $jetzt): int
         return $vorher - count($liste);
     });
 }
+
+/* ---------- Import aus Excel/CSV ---------- */
+
+/* Passende vorhandene Karte zu einer Importzeile: gleiche E-Mail oder Telefonnummer,
+   sonst gleicher Name, wenn keine widersprüchlichen Kontaktdaten da sind. */
+function importPassendeKarte(array $liste, array $z): ?string
+{
+    $id = karteZuKontakt($liste, $z['mail'], $z['tel']);
+    if ($id !== null) return $id;
+    $name = mb_strtolower($z['name']);
+    foreach ($liste as $k) {
+        if (mb_strtolower(trim($k['name'])) !== $name) continue;
+        $telKonflikt = $z['tel'] !== '' && ($k['tel'] ?? '') !== '' && telNorm($z['tel']) !== telNorm($k['tel']);
+        $mailKonflikt = $z['mail'] !== '' && ($k['mail'] ?? '') !== '' && mb_strtolower($z['mail']) !== mb_strtolower($k['mail']);
+        if (!$telKonflikt && !$mailKonflikt) return $k['id'];
+    }
+    return null;
+}
+
+/* Datum aus der Tabelle: TT.MM.JJJJ, TT.MM.JJ, JJJJ-MM-TT oder Excel-Zahl. null = leer, -1 = nicht erkannt. */
+function importDatum(string $s): ?int
+{
+    $s = trim($s);
+    if ($s === '') return null;
+    if (preg_match('/^\d{4,5}(\.\d+)?$/', $s) && (float) $s > 20000 && (float) $s < 80000) {
+        // Excel speichert Datumswerte als Tage seit dem 30.12.1899
+        return (new DateTimeImmutable('1899-12-30', tz()))->modify('+' . (int) $s . ' days')->setTime(12, 0)->getTimestamp();
+    }
+    if (preg_match('/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{2}|\d{4})$/', $s, $m)) {
+        $j = strlen($m[3]) === 2 ? 2000 + (int) $m[3] : (int) $m[3];
+        if ($j > (int) date('Y') + 1) $j -= 100;
+        $tag = (int) $m[1];
+        $monat = (int) $m[2];
+    } elseif (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $s, $m)) {
+        $j = (int) $m[1];
+        $monat = (int) $m[2];
+        $tag = (int) $m[3];
+    } else {
+        return -1;
+    }
+    if (!checkdate($monat, $tag, $j)) return -1;
+    return (new DateTimeImmutable('now', tz()))->setDate($j, $monat, $tag)->setTime(12, 0)->getTimestamp();
+}
+
+/* Tabelle prüfen und für die Vorschau aufbereiten. */
+function importAuswerten(array $cfg, array $tabelle): array
+{
+    $tabelle = array_values(array_filter($tabelle, fn($z) => implode('', array_map('trim', $z)) !== ''));
+    if (!$tabelle) return ['zeilen' => [], 'neu' => 0, 'ergaenzen' => 0, 'fehler' => 0, 'abgeschnitten' => false];
+
+    // Spalten anhand der Überschriften erkennen (sonst Reihenfolge wie in der Vorlage)
+    $muster = [
+        'vorname' => '/^vorname/', 'nachname' => '/^(nachname|familienname|zuname)/',
+        'name' => '/^(name|kunde|kundin|vor- und nachname)/', 'tel' => '/(tel|handy|mobil|nummer)/', 'mail' => '/mail/',
+        'datum' => '/(datum|besuch|zuletzt)/', 'leistung' => '/(leistung|behandlung|dienst)/', 'person' => '/^(bei|friseur|mitarbeit)/',
+        'notiz' => '/(notiz|bemerk|info|farb|rezept|anmerk)/',
+    ];
+    $spalten = [];
+    foreach (array_map(fn($v) => mb_strtolower(trim((string) $v)), $tabelle[0]) as $i => $titel) {
+        foreach ($muster as $feld => $re) {
+            if (!isset($spalten[$feld]) && preg_match($re, $titel)) { $spalten[$feld] = $i; break; }
+        }
+    }
+    $mitKopf = isset($spalten['name']) || isset($spalten['nachname']);
+    if (!$mitKopf) $spalten = ['name' => 0, 'tel' => 1, 'mail' => 2, 'datum' => 3, 'leistung' => 4, 'person' => 5, 'notiz' => 6];
+    $daten = $mitKopf ? array_slice($tabelle, 1) : $tabelle;
+    $wert = fn(array $z, string $feld) => isset($spalten[$feld]) ? trim(preg_replace('/\s+/u', ' ', (string) ($z[$spalten[$feld]] ?? ''))) : '';
+
+    $vorhanden = karteiLesen($cfg);
+    $jetzt = time();
+    $out = [];
+    $zaehler = ['neu' => 0, 'ergaenzen' => 0, 'fehler' => 0];
+    foreach (array_slice($daten, 0, 3000) as $n => $z) {
+        $name = $wert($z, 'name');
+        if (isset($spalten['vorname']) || isset($spalten['nachname'])) $name = trim($wert($z, 'vorname') . ' ' . $wert($z, 'nachname')) ?: $name;
+        $tel = $wert($z, 'tel');
+        $mail = $wert($z, 'mail');
+        $notiz = isset($spalten['notiz']) ? mb_substr(trim((string) ($z[$spalten['notiz']] ?? '')), 0, 1000) : '';
+        $datumText = $wert($z, 'datum');
+        $leistungText = mb_substr($wert($z, 'leistung'), 0, 60);
+        $personText = $wert($z, 'person');
+        $fehler = [];
+        $hinweise = [];
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) $fehler[] = 'Name fehlt';
+        if ($mail !== '' && !filter_var($mail, FILTER_VALIDATE_EMAIL)) { $hinweise[] = 'E-Mail ungültig, wird weggelassen'; $mail = ''; }
+        if ($tel !== '' && preg_match_all('/\d/', $tel) < 6) { $hinweise[] = 'Telefon ungültig, wird weggelassen'; $tel = ''; }
+        $tel = mb_substr($tel, 0, 25);
+        $beginn = importDatum($datumText);
+        if ($beginn === -1) { $hinweise[] = 'Datum nicht erkannt, wird weggelassen'; $beginn = null; }
+        elseif ($beginn !== null && $beginn > $jetzt) { $hinweise[] = 'Datum liegt in der Zukunft, wird weggelassen'; $beginn = null; }
+        if ($beginn !== null && $leistungText === '') $leistungText = 'Besuch';
+        if ($beginn === null && $leistungText !== '') $hinweise[] = 'Leistung ohne gültiges Datum wird nicht übernommen';
+        // Leistung aus der Liste erkennen (mit oder ohne „Damen –“ davor)
+        $leistungId = '';
+        $klein = mb_strtolower($leistungText);
+        foreach (LEISTUNGEN as $l) {
+            if ($klein !== '' && ($klein === mb_strtolower(leistungsname($l)) || $klein === mb_strtolower($l['name']))) {
+                $leistungId = $l['id'];
+                $leistungText = leistungsname($l);
+                break;
+            }
+        }
+        $person = '';
+        foreach (TEAM as $p) if ($personText !== '' && str_starts_with(mb_strtolower($personText), mb_strtolower($p['name']))) $person = $p['id'];
+        $zeile = [
+            'zeile' => $n + ($mitKopf ? 2 : 1), 'name' => $name, 'tel' => $tel, 'mail' => $mail, 'notiz' => $notiz,
+            'datum' => $beginn ? (new DateTimeImmutable('@' . $beginn))->setTimezone(tz())->format('d.m.Y') : '', 'beginn' => $beginn,
+            'leistung' => $leistungText, 'leistungText' => $leistungText, 'leistungId' => $leistungId,
+            'person' => $person, 'personName' => $person ? person($person)['name'] : '',
+            'fehler' => implode(', ', $fehler), 'hinweis' => implode(', ', $hinweise),
+        ];
+        if ($fehler) {
+            $zeile['status'] = 'fehler';
+        } else {
+            $zeile['status'] = importPassendeKarte($vorhanden, $zeile) !== null ? 'ergaenzen' : 'neu';
+            // Auch doppelte Zeilen in der Datei selbst erkennen
+            if ($zeile['status'] === 'neu') $vorhanden[] = neueKarte($name, $tel, $mail, '');
+        }
+        $zaehler[$zeile['status']]++;
+        $out[] = $zeile;
+    }
+    return ['zeilen' => $out] + $zaehler + ['abgeschnitten' => count($daten) > 3000];
+}

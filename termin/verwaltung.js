@@ -313,6 +313,15 @@
 </div>
 <section class="panel">${inhalt}</section>
 <section class="panel">
+  <h2>Excel</h2>
+  <p class="muted small" style="margin:6px 0 10px">Karteikarten aus einer Excel-Liste übernehmen oder die ganze Kartei als Excel-Datei sichern. Für den Import am besten die Vorlage verwenden.</p>
+  <div class="knoepfe">
+    <button type="button" class="btn-outline" data-act="import">${ic('plus', 18, 2)}Aus Excel importieren</button>
+    <a class="btn-outline" href="verwaltung.php?a=export" download>${ic('ext', 18)}Kartei als Excel exportieren</a>
+    <a class="btn-outline" href="verwaltung.php?a=vorlage" download>${ic('ext', 18)}Vorlage herunterladen</a>
+  </div>
+</section>
+<section class="panel">
   <h2>Auch Termine ohne Kundenkarte durchsuchen</h2>
   <form class="suchfeld" data-submit="suche" role="search" style="margin-top:10px">
     <label for="such-q" style="position:absolute;left:-9999px">In Terminen suchen</label>
@@ -570,6 +579,37 @@
           ${fehlerHtml()}
           <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird gespeichert …' : 'Speichern'}</button>
         </form>`;
+    } else if (M.typ === 'import') {
+      if (!M.vorschau) {
+        html = `${kopfDialog('Aus Excel importieren')}
+          <form class="stack" data-submit="import-pruefen" novalidate>
+            <p class="muted">Excel-Datei (.xlsx) oder CSV auswählen. Die erste Zeile sollte die Überschriften enthalten (Name, Telefon, E-Mail, Letzter Besuch, Letzte Leistung, Bei, Notiz) – so wie in der <a href="verwaltung.php?a=vorlage" download>Vorlage</a>. Vor dem Übernehmen siehst du eine Vorschau.</p>
+            <div class="field"><label for="f-datei">Datei</label><input id="f-datei" name="datei" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required style="padding:10px;height:auto"></div>
+            ${fehlerHtml()}
+            <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird geprüft …' : 'Prüfen'}</button>
+          </form>`;
+      } else {
+        const v = M.vorschau;
+        const badge = { neu: '<span class="badge g">neu</span>', ergaenzen: '<span class="badge">wird ergänzt</span>', fehler: '<span class="st st-weg">Fehler</span>' };
+        const zeilen = v.zeilen.slice(0, 300).map((z) => `<div class="bk"><div class="bk-top">
+            <span class="bk-time" style="width:auto;min-width:40px" title="Zeile in der Datei">${z.zeile}</span>
+            <div class="bk-main"><b>${esc(z.name || '(ohne Name)')} ${badge[z.status]}</b>
+              <span>${[z.tel, z.mail].filter(Boolean).map(esc).join(' · ')}</span>
+              ${z.datum ? `<span>Zuletzt: ${esc(z.datum)} · ${esc(z.leistung)}${z.personName ? ' bei ' + esc(z.personName) : ''}</span>` : ''}
+              ${z.notiz ? `<span>Notiz: ${esc(z.notiz)}</span>` : ''}
+              ${z.fehler ? `<span class="err">${esc(z.fehler)}</span>` : ''}${z.hinweis ? `<span style="color:#7A4B00">${esc(z.hinweis)}</span>` : ''}</div></div></div>`).join('');
+        const anzahl = v.neu + v.ergaenzen;
+        html = `${kopfDialog('Vorschau')}
+          <div class="stats" style="margin:0"><div><b>${v.neu}</b><span>neue Karten</span></div><div><b>${v.ergaenzen}</b><span>schon vorhanden, werden ergänzt</span></div><div><b>${v.fehler}</b><span>Zeilen mit Fehlern (werden übersprungen)</span></div></div>
+          ${v.abgeschnitten ? '<p class="err">Es werden höchstens 3000 Zeilen auf einmal eingelesen.</p>' : ''}
+          <p class="muted small">Vorhandene Karten werden nur ergänzt: Leere Felder werden gefüllt, Notizen angehängt, nichts überschrieben.</p>
+          <div style="max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:0 12px">${zeilen || '<p class="muted">Keine Zeilen gefunden.</p>'}${v.zeilen.length > 300 ? `<p class="muted small">… und ${v.zeilen.length - 300} weitere Zeilen.</p>` : ''}</div>
+          ${fehlerHtml()}
+          <div class="knoepfe">
+            <button type="button" class="btn-outline" data-act="import-zurueck">Andere Datei</button>
+            <button type="button" class="btn-primary" data-act="import-uebernehmen"${!anzahl || M.sendet ? ' disabled' : ''}${M.sendet ? ' aria-busy="true"' : ''}>${M.sendet ? 'Wird übernommen …' : anzahl + ' Karte' + (anzahl === 1 ? '' : 'n') + ' übernehmen'}</button>
+          </div>`;
+      }
     } else if (M.typ === 'besuch') {
       const f = M.werte;
       html = `${kopfDialog('Besuch nachtragen')}
@@ -807,6 +847,24 @@
       } catch (e) { M.fehler = e.message; dialogZeichnen(); }
     },
     'schliessen-weiter': (arg, el) => { dialogSchliessen(); location.hash = el.getAttribute('href'); },
+
+    /* Excel-Import */
+    import: () => dialogOeffnen({ typ: 'import', vorschau: null }),
+    'import-zurueck': () => { M.vorschau = null; M.fehler = ''; dialogZeichnen(); },
+    'import-uebernehmen': async () => {
+      M.sendet = true; M.fehler = '';
+      dialogZeichnen();
+      try {
+        const r = await api('import-uebernehmen', {}, { zeilen: M.vorschau.zeilen.filter((z) => z.status !== 'fehler') });
+        dialogSchliessen();
+        toast(`Übernommen: ${r.neu} neu, ${r.ergaenzt} ergänzt.`);
+        kartei.liste = null;
+        karteiLaden();
+      } catch (e) {
+        M.sendet = false; M.fehler = e.message;
+        dialogZeichnen();
+      }
+    },
   };
 
   function klick(ev, root) {
@@ -885,7 +943,29 @@
     if (ev.target.dataset.submit === 'neu') neuSenden(false);
     if (ev.target.dataset.submit === 'verschieben') verschiebenSenden(false);
     if (ev.target.dataset.submit === 'karte' || ev.target.dataset.submit === 'besuch') karteiSenden(ev.target);
+    if (ev.target.dataset.submit === 'import-pruefen') importPruefen(ev.target);
   });
+
+  async function importPruefen(form) {
+    const datei = form.elements.namedItem('datei').files[0];
+    if (!datei) { M.fehler = 'Bitte eine Datei auswählen.'; dialogZeichnen(); return; }
+    M.sendet = true; M.fehler = '';
+    dialogZeichnen();
+    try {
+      const fd = new FormData();
+      fd.append('datei', datei);
+      const res = await fetch('verwaltung.php?a=import-pruefen', { method: 'POST', body: fd, headers: { 'X-Verwaltung': '1' }, credentials: 'same-origin' });
+      let data = {};
+      try { data = await res.json(); } catch (e) { /* leer */ }
+      if (res.status === 401) { angemeldet = false; dialogSchliessen(); render(); return; }
+      if (!res.ok) throw new Error(data.fehler || 'Die Datei konnte nicht gelesen werden.');
+      M.vorschau = data;
+    } catch (e) {
+      M.fehler = e.message;
+    }
+    M.sendet = false;
+    dialogZeichnen();
+  }
 
   async function karteiSenden(form) {
     Object.assign(M.werte, formWerte(form));

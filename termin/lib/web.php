@@ -56,10 +56,10 @@ function bremse(array $cfg, string $art, int $max, string $meldung = ''): void
     }
 }
 
-function eingabe(): array
+function eingabe(int $max = 5000): array
 {
     $roh = file_get_contents('php://input');
-    if (strlen((string) $roh) > 5000) antwort(413, ['fehler' => 'Anfrage zu groß']);
+    if (strlen((string) $roh) > $max) antwort(413, ['fehler' => 'Anfrage zu groß']);
     $d = json_decode((string) $roh, true);
     return is_array($d) ? $d : [];
 }

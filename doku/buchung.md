@@ -15,6 +15,7 @@ termin/
 │   ├── salon.php                   ← Leistungen, Team, Öffnungszeiten, Regeln
 │   ├── web.php                     ← gemeinsame Hilfsfunktionen, Einstellungen (Pausieren)
 │   ├── kunden.php                  ← Kundenkartei (daten/kunden.json)
+│   ├── tabelle.php                 ← Excel (.xlsx) und CSV lesen/schreiben, ohne Zusatzbibliotheken
 │   ├── zeit.php                    ← Feiertage, Öffnungszeiten, freie Zeiten (reine Funktionen)
 │   ├── kalender.php                ← Google Calendar API über Dienstkonto, Demo-Modus
 │   └── mail.php                    ← Bestätigung, Absage, Info an den Salon
@@ -125,3 +126,13 @@ Stammkund:innen im Dashboard unter **Kunden**. Die Kartei liegt als `daten/kunde
 - **Online-Buchungen** werden automatisch einer Karte zugeordnet, wenn E-Mail oder Telefonnummer übereinstimmt (Telefon wird vereinheitlicht: `0664…` = `+43664…`). Neue Online-Kund:innen bekommen keine Karte von selbst.
 - **Löschen:** `aufgaben.php` löscht Karten, deren letzter Besuch (bzw. Anlage) mehr als 3 Jahre zurückliegt. Die Karte zeigt das Löschdatum an. Von Hand löschen geht jederzeit.
 - Die Datenschutzerklärung der Homepage hat dazu den Abschnitt „Kundenkartei“.
+
+### Excel-Import und -Export
+
+Unter **Kunden › Excel** im Dashboard:
+
+- **Vorlage herunterladen:** `.xlsx` mit den Spalten Name, Telefon, E-Mail, Letzter Besuch, Letzte Leistung, Bei, Notiz und zwei erfundenen Beispielzeilen.
+- **Aus Excel importieren:** `.xlsx` oder `.csv` (Komma, Semikolon oder Tabulator; UTF-8 oder Windows-Zeichensatz). Spalten werden an den Überschriften erkannt (auch Vorname/Nachname getrennt, Handy, Bemerkung, Behandlung …), sonst gilt die Reihenfolge der Vorlage. Datum als `TT.MM.JJJJ`, `TT.MM.JJ`, `JJJJ-MM-TT` oder Excel-Datumswert. Zuerst kommt eine **Vorschau** (neu / wird ergänzt / Fehler mit Zeilennummer), erst danach wird übernommen. Vorhandene Karten (gleiche E-Mail oder Telefonnummer, sonst gleicher Name ohne widersprüchliche Kontaktdaten) werden nur ergänzt: leere Felder füllen, Notiz anhängen, den letzten Besuch nachtragen, nichts überschreiben. Höchstens 3000 Zeilen und 5 MB pro Datei; das alte `.xls`-Format geht nicht.
+- **Kartei als Excel exportieren:** alle Karten mit letztem Besuch, nächstem Termin, Anzahl Besuche und Löschdatum. Der Export lässt sich wieder importieren.
+
+`lib/tabelle.php` liest und schreibt Zip und `.xlsx` selbst (nur `zlib`/`gzinflate`, keine Erweiterung `zip` nötig). Getestet mit Dateien, die Excel selbst gespeichert hat.
