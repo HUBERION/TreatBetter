@@ -76,7 +76,7 @@ function adminSicht(array $t, string $person): array
         'titel' => (string) ($t['summary'] ?? ''),
         'notiz' => $art === 'block' || $art === 'kalender' ? (string) ($t['description'] ?? '') : '',
         'name' => (string) ($priv['name'] ?? ''), 'tel' => (string) ($priv['tel'] ?? ''), 'mail' => (string) ($priv['mail'] ?? ''),
-        'leistung' => $l ? leistungsname($l) : '', 'leistungId' => $l['id'] ?? '',
+        'leistung' => leistungAusTermin($priv), 'leistungId' => $l['id'] ?? '',
         'anonym' => !empty($priv['anonym']), 'erinnert' => !empty($priv['erinnert']),
         'blockiert' => $ganztags || ($t['transparency'] ?? 'opaque') !== 'transparent',
     ];
@@ -164,13 +164,21 @@ try {
         $trotzdem = !empty($d['trotzdem']);
 
         if (($d['art'] ?? '') === 'termin') {
-            $l = leistung((string) ($d['leistung'] ?? '')) ?? antwort(400, ['fehler' => 'Bitte eine Leistung wählen.', 'felder' => ['leistung' => 'Bitte eine Leistung wählen.']]);
+            // Leistung aus der Liste oder „eigene“ Tätigkeit mit selbst gewählter Bezeichnung
+            $eigene = ($d['leistung'] ?? '') === 'eigene';
+            $l = $eigene ? null : leistung((string) ($d['leistung'] ?? ''));
             [$name, $mail, $tel, $f] = pruefeKunde($d, false);
+            $taetigkeit = trim(preg_replace('/\s+/u', ' ', (string) ($d['taetigkeit'] ?? '')));
+            if (!$eigene && !$l) $f['leistung'] = 'Bitte eine Leistung wählen.';
+            if ($eigene && (mb_strlen($taetigkeit) < 2 || mb_strlen($taetigkeit) > 60)) $f['taetigkeit'] = 'Bitte angeben, was gemacht wird.';
+            // Dauer: Vorgabe der Leistung oder selbst eingetragen (5 bis 600 Minuten)
+            $dauer = isset($d['dauer']) && $d['dauer'] !== '' && $d['dauer'] !== null ? (int) $d['dauer'] : ($l['min'] ?? 0);
+            if ($dauer < 5 || $dauer > 600) $f['dauer'] = 'Bitte eine Dauer zwischen 5 und 600 Minuten angeben.';
             if ($f) antwort(400, ['fehler' => 'Bitte die markierten Felder prüfen.', 'felder' => $f]);
             $beginn = zeitpunkt($tag, (string) ($d['uhr'] ?? ''));
-            $ende = $beginn + $l['min'] * 60;
+            $ende = $beginn + $dauer * 60;
             if (!$trotzdem && ($k = konflikte($cfg, $p['id'], $beginn, $ende))) antwort(409, ['konflikt' => $k, 'fehler' => 'Zu dieser Zeit ist schon etwas eingetragen.']);
-            $voll = leistungsname($l);
+            $voll = $eigene ? $taetigkeit : leistungsname($l);
             $token = $mail !== '' ? neuerToken() : '';
             $id = terminEintragen($cfg, $p['id'], [
                 'summary' => $name . ' – ' . $voll,
@@ -180,7 +188,8 @@ try {
                 'transparency' => 'opaque',
                 'extendedProperties' => ['private' => [
                     'tb' => '1', 'quelle' => 'telefon', 'tok' => $token !== '' ? stornoHash($token) : '',
-                    'leistung' => $l['id'], 'name' => $name, 'mail' => $mail, 'tel' => $tel,
+                    'leistung' => $eigene ? 'eigene' : $l['id'], 'taetigkeit' => $eigene ? $taetigkeit : '',
+                    'name' => $name, 'mail' => $mail, 'tel' => $tel,
                 ]],
             ]);
             $gemailt = false;
@@ -234,7 +243,10 @@ try {
         $s = adminSicht($t, $p['id']);
         if ($s['ganztags']) antwort(400, ['fehler' => 'Ganztägige Einträge bitte löschen und neu eintragen.']);
         $beginn = zeitpunkt((string) ($d['tag'] ?? ''), (string) ($d['uhr'] ?? ''));
-        $ende = $beginn + ($s['ende'] - $s['beginn']);
+        // Dauer bleibt gleich, außer sie wurde beim Verschieben geändert
+        $dauer = isset($d['dauer']) && $d['dauer'] !== '' && $d['dauer'] !== null ? (int) $d['dauer'] : intdiv($s['ende'] - $s['beginn'], 60);
+        if ($dauer < 5 || $dauer > 600) antwort(400, ['fehler' => 'Bitte eine Dauer zwischen 5 und 600 Minuten angeben.']);
+        $ende = $beginn + $dauer * 60;
         if (empty($d['trotzdem']) && ($k = konflikte($cfg, $nach['id'], $beginn, $ende, $s['id']))) antwort(409, ['konflikt' => $k, 'fehler' => 'Zu dieser Zeit ist schon etwas eingetragen.']);
         $priv = $t['extendedProperties']['private'] ?? [];
         $folge = (int) ($priv['folge'] ?? 0) + 1;

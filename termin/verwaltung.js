@@ -18,6 +18,7 @@
   const toMin = (s) => { const p = String(s).split(':'); return Number(p[0]) * 60 + Number(p[1]); };
   const fmt = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
   const minOf = (ts) => { const d = new Date(ts * 1000); return d.getHours() * 60 + d.getMinutes(); };
+  const endeText = (uhr, dauer) => (/^\d{2}:\d{2}$/.test(uhr || '') && Number(dauer) > 0 ? 'Endet um ' + fmt(toMin(uhr) + Number(dauer)) + ' Uhr.' : '');
   const ART_TEXT = { online: 'Online', telefon: 'Telefon', block: 'Blockiert', kalender: 'Kalender' };
 
   const ICONS = {
@@ -347,11 +348,23 @@
         <button type="button" data-act="neu-art" data-arg="block" aria-pressed="${f.art === 'block'}">Zeit blockieren</button></div>`;
       let felder;
       if (f.art === 'termin') {
+        const eigene = f.leistung === 'eigene';
+        const vorgabe = eigene ? null : D.leistungen.find((l) => l.id === f.leistung);
+        // Dauer: Vorgabe der Leistung oder selbst eingetragen; bei „Andere Tätigkeit“ immer selbst
+        const dauerFeld = eigene || f.dauerEigen
+          ? `${feld('dauer', 'Dauer in Minuten', 'number', f.dauer || (vorgabe ? vorgabe.min : ''), ' min="5" max="600" step="5" inputmode="numeric" required')}
+             ${!eigene ? `<div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-vorgabe">Vorgabe ${vorgabe.min} Min. verwenden</button></div>` : '<div></div>'}`
+          : `<div class="field"><span class="sublabel">Dauer</span><span style="min-height:48px;display:flex;align-items:center">${vorgabe ? vorgabe.min : ''} Min. (Vorgabe)</span></div>
+             <div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-eigen">Dauer selbst eintragen</button></div>`;
         felder = `<div class="grid2">
           ${auswahlPerson('person', f.person)}
-          <div class="field"><label for="f-leistung">Leistung</label><select id="f-leistung" name="leistung">${D.leistungen.map((l) => `<option value="${l.id}"${f.leistung === l.id ? ' selected' : ''}>${esc(l.voll)} (${l.min} Min.)</option>`).join('')}</select></div>
+          <div class="field"><label for="f-leistung">Leistung</label><select id="f-leistung" name="leistung" data-change="leistung">${D.leistungen.map((l) => `<option value="${l.id}"${f.leistung === l.id ? ' selected' : ''}>${esc(l.voll)} (${l.min} Min.)</option>`).join('')}
+            <option value="eigene"${eigene ? ' selected' : ''}>Andere Tätigkeit (selbst eintragen) …</option></select></div>
+          ${eigene ? `<div class="full">${feld('taetigkeit', 'Was wird gemacht?', 'text', f.taetigkeit, ' maxlength="60" placeholder="z. B. Pflanzenfarbe + Schnitt" required')}</div>` : ''}
           ${feld('tag', 'Datum', 'date', f.tag, ' required')}
           ${feld('uhr', 'Uhrzeit', 'time', f.uhr, ' step="300" required')}
+          ${dauerFeld}
+          <p class="muted small full" id="ende-hinweis" aria-live="polite">${endeText(f.uhr, eigene || f.dauerEigen ? f.dauer || (vorgabe ? vorgabe.min : '') : vorgabe && vorgabe.min)}</p>
           <div class="full">${feld('name', 'Name der Kundin bzw. des Kunden', 'text', f.name, ' autocomplete="off" maxlength="80" required')}</div>
           ${feld('tel', 'Telefon (freiwillig)', 'tel', f.tel, ' autocomplete="off" maxlength="25"')}
           ${feld('mail', 'E-Mail (freiwillig)', 'email', f.mail, ' autocomplete="off" maxlength="120"')}
@@ -416,7 +429,7 @@
       html = `${kopfDialog('Verschieben')}
         <p class="muted">${esc(terminText(t))} · bisher ${esc(shortDate(t.tag))}, ${esc(t.uhr)} Uhr bei ${esc(personName(t.person))}</p>
         <form class="stack" data-submit="verschieben" novalidate>
-          <div class="grid2">${auswahlPerson('nach', f.nach)}<div></div>${feld('tag', 'Neues Datum', 'date', f.tag, ' required')}${feld('uhr', 'Neue Uhrzeit', 'time', f.uhr, ' step="300" required')}</div>
+          <div class="grid2">${auswahlPerson('nach', f.nach)}<div></div>${feld('tag', 'Neues Datum', 'date', f.tag, ' required')}${feld('uhr', 'Neue Uhrzeit', 'time', f.uhr, ' step="300" required')}${t.ganztags ? '' : feld('dauer', 'Dauer in Minuten', 'number', f.dauer, ' min="5" max="600" step="5" inputmode="numeric" required')}<p class="muted small" id="ende-hinweis" aria-live="polite" style="align-self:end">${endeText(f.uhr, f.dauer)}</p></div>
           ${t.mail && (t.art === 'online' || t.art === 'telefon') ? `<label class="check"><input type="checkbox" name="mail"${f.mail ? ' checked' : ''}> Kundin bzw. Kunde per E-Mail informieren</label>` : (t.art === 'online' || t.art === 'telefon') ? '<p class="muted small">Keine E-Mail hinterlegt: Bitte telefonisch Bescheid geben.</p>' : ''}
           ${konfliktHtml()}${fehlerHtml()}
           <div class="knoepfe">${M.konflikt ? '<button type="button" class="btn-outline" data-act="trotzdem">Trotzdem verschieben</button>' : ''}
@@ -447,7 +460,7 @@
       let gemailt = false;
       for (const person of personen) {
         const body = f.art === 'termin'
-          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, name: f.name, tel: f.tel, mail: f.mail, mailSenden: f.mailSenden && !!f.mail, trotzdem: !!trotzdem }
+          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit, dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail, mailSenden: f.mailSenden && !!f.mail, trotzdem: !!trotzdem }
           : { art: 'block', person, tag: f.tag, bisTag: f.bisTag, ganztags: !!f.ganztags, uhr: f.uhr, bis: f.bis, grund: f.grund, notiz: f.notiz };
         const r = await api('eintragen', {}, body);
         gemailt = gemailt || r.gemailt;
@@ -474,7 +487,7 @@
     if (!trotzdem) M.konflikt = null;
     dialogZeichnen();
     try {
-      const r = await api('verschieben', {}, { person: t.person, id: t.id, nach: f.nach, tag: f.tag, uhr: f.uhr, mail: !!f.mail, trotzdem: !!trotzdem });
+      const r = await api('verschieben', {}, { person: t.person, id: t.id, nach: f.nach, tag: f.tag, uhr: f.uhr, dauer: f.dauer, mail: !!f.mail, trotzdem: !!trotzdem });
       dialogSchliessen();
       toast('Verschoben' + (r.gemailt ? ', E-Mail verschickt.' : '.'));
       laden(true);
@@ -500,7 +513,7 @@
     const tag = r.datum || keyOf(new Date());
     dialogOeffnen({
       typ: 'neu',
-      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
+      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, dauerEigen: false, dauer: '', taetigkeit: '', grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
       felder: {},
     });
   }
@@ -514,13 +527,15 @@
       neuDialog({ person, uhr: fmt(Math.min(Math.max(min, 7 * 60), 20 * 60)) });
     },
     'neu-art': (art) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.art = art; M.konflikt = null; M.fehler = ''; M.felder = {}; dialogZeichnen(); },
+    'dauer-eigen': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); const l = D.leistungen.find((x) => x.id === M.werte.leistung); M.werte.dauerEigen = true; M.werte.dauer = l ? l.min : ''; dialogZeichnen(); const el = dlg.querySelector('#f-dauer'); if (el) { el.focus(); el.select(); } },
+    'dauer-vorgabe': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.dauerEigen = false; M.werte.dauer = ''; dialogZeichnen(); },
     detail: (arg) => dialogOeffnen({ typ: 'detail', arg }),
     'such-detail': (arg) => dialogOeffnen({ typ: 'detail', arg, liste: suche.treffer }),
     schliessen: () => dialogSchliessen(),
     verschieben: (arg) => {
       const t = termin(arg);
       const liste = M && M.liste;
-      dialogOeffnen({ typ: 'verschieben', arg, liste, werte: { nach: t.person, tag: t.tag, uhr: t.uhr, mail: !!t.mail } });
+      dialogOeffnen({ typ: 'verschieben', arg, liste, werte: { nach: t.person, tag: t.tag, uhr: t.uhr, dauer: Math.round((t.ende - t.beginn) / 60), mail: !!t.mail } });
     },
     absagen: () => { M.absagen = true; dialogZeichnen(); const b = dlg.querySelector('[data-act="absagen-ja"]'); if (b) b.focus(); },
     'absagen-nein': () => { M.absagen = false; dialogZeichnen(); },
@@ -573,9 +588,23 @@
     const el = ev.target;
     if (el.dataset.change === 'datum' && el.value) location.hash = '#/tag/' + el.value;
   });
+  dlg.addEventListener('input', (ev) => {
+    if (!['uhr', 'dauer'].includes(ev.target.name)) return;
+    const form = ev.target.form, hinweis = dlg.querySelector('#ende-hinweis');
+    if (!form || !hinweis) return;
+    const w = formWerte(form);
+    const vorgabe = D.leistungen.find((l) => l.id === w.leistung);
+    hinweis.textContent = endeText(w.uhr, w.dauer !== undefined ? w.dauer : vorgabe && vorgabe.min);
+  });
   dlg.addEventListener('change', (ev) => {
     const el = ev.target;
-    if (el.dataset.change === 'ganztags') { Object.assign(M.werte, formWerte(el.form)); dialogZeichnen(); }
+    if (el.dataset.change === 'ganztags' || el.dataset.change === 'leistung') {
+      Object.assign(M.werte, formWerte(el.form));
+      if (el.dataset.change === 'leistung' && M.werte.leistung !== 'eigene' && !M.werte.dauerEigen) M.werte.dauer = '';
+      dialogZeichnen();
+      const n = dlg.querySelector(el.dataset.change === 'leistung' && M.werte.leistung === 'eigene' ? '#f-taetigkeit' : '#f-' + el.name);
+      if (n) n.focus();
+    }
   });
   app.addEventListener('submit', async (ev) => {
     const form = ev.target;

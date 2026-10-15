@@ -105,9 +105,9 @@ Für Andrea und Pamela, am Salon-Handy und am Salon-PC: **andreazechmeister.at/t
 - **Anmeldung:** ein gemeinsames Salon-Passwort (`verwaltung_passwort`, nur als Hash in der Konfiguration). Danach bleibt man 30 Tage angemeldet. Das Cookie `tb_verwaltung` enthält nur Ablaufzeit und Signatur (`verwaltung_geheimnis`), ist `HttpOnly`, `Secure`, `SameSite=Strict` und technisch notwendig, also ohne Cookie-Banner. Höchstens 10 Anmeldeversuche pro Stunde und IP.
 - **Tag:** Andrea und Pamela nebeneinander; in eine freie Stelle tippen öffnet „Eintragen“ mit Person und Uhrzeit.
 - **Woche:** sieben Tage auf einen Blick.
-- **Eintragen:** Kundentermin (telefonisch) oder Zeit blockieren (Pause, Arzttermin, Frei, Urlaub, Krank, Sonstiges, auch ganztägig über mehrere Tage, auch für beide). Bei Überschneidungen kommt eine Warnung mit „Trotzdem eintragen“.
+- **Eintragen:** Kundentermin (telefonisch) mit Leistung aus der Liste oder „Andere Tätigkeit“ mit eigener Bezeichnung; die Dauer kommt aus der Leistung oder wird selbst eingetragen (5–600 Minuten), oder Zeit blockieren (Pause, Arzttermin, Frei, Urlaub, Krank, Sonstiges, auch ganztägig über mehrere Tage, auch für beide). Bei Überschneidungen kommt eine Warnung mit „Trotzdem eintragen“.
 - **Telefonische Termine** mit E-Mail-Adresse bekommen auf Wunsch Bestätigung, Absage-Link und Erinnerung wie Online-Buchungen.
-- **Verschieben** (auch zur anderen Person) und **Absagen**, jeweils auf Wunsch mit E-Mail an die Kundin. Beim Verschieben gibt es einen neuen Absage-Link, der alte gilt nicht mehr.
+- **Verschieben** (auch zur anderen Person), dabei lässt sich auch die Dauer ändern, und **Absagen**, jeweils auf Wunsch mit E-Mail an die Kundin. Beim Verschieben gibt es einen neuen Absage-Link, der alte gilt nicht mehr.
 - **Kundensuche** nach Name, Telefon oder E-Mail (letzte 12 Monate und alle kommenden Termine).
 - **Einstellungen:** Online-Buchung je Person pausieren (`daten/einstellungen.json`). Die Kundenseite blendet pausierte Personen sofort aus.
 

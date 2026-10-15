@@ -132,11 +132,10 @@ try {
         $t = $treffer['termin'];
         [$beginn, $ende] = terminZeit($t);
         $priv = $t['extendedProperties']['private'];
-        $l = leistung($priv['leistung'] ?? '');
         $frist = $beginn - REGELN['storno'] * 3600;
         $info = [
             'beginn' => $beginn, 'tag' => (new DateTimeImmutable('@' . $beginn))->setTimezone(tz())->format('Y-m-d'),
-            'uhr' => hhmm($beginn), 'bis' => hhmm($ende), 'leistung' => $l ? leistungsname($l) : '',
+            'uhr' => hhmm($beginn), 'bis' => hhmm($ende), 'leistung' => leistungAusTermin($priv),
             'person' => person($treffer['person'])['name'], 'stornierbar' => time() < $frist,
             'frist' => datumLang($frist) . ', ' . hhmm($frist) . ' Uhr', 'vorbei' => $ende < time(),
         ];

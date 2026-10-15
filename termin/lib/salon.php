@@ -74,6 +74,14 @@ function person(string $id): ?array
     return null;
 }
 
+/* Bezeichnung der Leistung eines Termins aus seinen Zusatzfeldern:
+   Leistung aus der Liste oder eine im Dashboard selbst benannte Tätigkeit. */
+function leistungAusTermin(array $priv): string
+{
+    $l = leistung((string) ($priv['leistung'] ?? ''));
+    return $l ? leistungsname($l) : (string) ($priv['taetigkeit'] ?? '');
+}
+
 /* Voller Name einer Leistung, z. B. „Damen – Trockenhaarschnitt“. */
 function leistungsname(array $l): string
 {

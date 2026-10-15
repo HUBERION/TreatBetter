@@ -45,8 +45,7 @@ foreach (TEAM as $p) {
             $priv = $t['extendedProperties']['private'];
             if (!empty($priv['erinnert']) || empty($priv['mail'])) continue;
             [$beginn, $ende] = terminZeit($t);
-            $l = leistung($priv['leistung'] ?? '');
-            mailErinnerung($cfg, ['beginn' => $beginn, 'leistung' => $l ? leistungsname($l) : '', 'person' => $p['name'],
+            mailErinnerung($cfg, ['beginn' => $beginn, 'leistung' => leistungAusTermin($priv), 'person' => $p['name'],
                 'name' => $priv['name'] ?? '', 'mail' => $priv['mail']]);
             terminAendern($cfg, $p['id'], (string) $t['id'], ['extendedProperties' => ['private' => $priv + ['erinnert' => '1']]]);
             $erinnert++;
@@ -65,12 +64,11 @@ foreach (TEAM as $p) {
         foreach (eigeneBuchungen($cfg, $p['id'], $grenze->modify('-12 months')->getTimestamp(), $grenze->getTimestamp()) as $t) {
             $priv = $t['extendedProperties']['private'];
             if (!empty($priv['anonym'])) continue;
-            $l = leistung($priv['leistung'] ?? '');
             terminAendern($cfg, $p['id'], (string) $t['id'], [
-                'summary' => 'Online-Termin – ' . ($l ? leistungsname($l) : 'Leistung'),
+                'summary' => 'Online-Termin – ' . (leistungAusTermin($priv) ?: 'Leistung'),
                 'description' => 'Online gebucht. Kundendaten nach ' . REGELN['aufbewahrung'] . ' Monaten automatisch entfernt.',
                 'extendedProperties' => ['private' => [
-                    'tb' => '1', 'leistung' => $priv['leistung'] ?? '', 'anonym' => '1',
+                    'tb' => '1', 'leistung' => $priv['leistung'] ?? '', 'taetigkeit' => $priv['taetigkeit'] ?? '', 'anonym' => '1',
                     'name' => '', 'mail' => '', 'tel' => '', 'tok' => '', 'erinnert' => $priv['erinnert'] ?? '',
                 ]],
             ]);
