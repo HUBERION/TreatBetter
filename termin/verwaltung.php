@@ -13,6 +13,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/web.php';
+require_once __DIR__ . '/lib/treatwell.php';
 
 jsonKopf();
 header('X-Frame-Options: DENY');
@@ -60,6 +61,13 @@ function personPruefen(string $id): array
     return person($id) ?? antwort(400, ['fehler' => 'Bitte Andrea oder Pamela wählen.']);
 }
 
+/* Stand des Treatwell-Abrufs fürs Dashboard. */
+function twStatus(array $cfg): array
+{
+    $z = twZustand($cfg);
+    return ['aktiv' => !empty($cfg['postfach']['passwort']), 'letzterAbruf' => $z['letzterAbruf'], 'fehler' => $z['fehler'], 'hinweise' => $z['hinweise']];
+}
+
 /* Termin für das Dashboard aufbereiten. */
 function adminSicht(array $t, string $person): array
 {
@@ -79,6 +87,7 @@ function adminSicht(array $t, string $person): array
         'name' => (string) ($priv['name'] ?? ''), 'tel' => (string) ($priv['tel'] ?? ''), 'mail' => (string) ($priv['mail'] ?? ''),
         'leistung' => leistungAusTermin($priv), 'leistungId' => $l['id'] ?? '',
         'anonym' => !empty($priv['anonym']), 'erinnert' => !empty($priv['erinnert']), 'kunde' => (string) ($priv['kunde'] ?? ''),
+        'twNr' => (string) ($priv['tw'] ?? ''), 'twBezahlt' => (string) ($priv['twbezahlt'] ?? ''),
         'blockiert' => $ganztags || ($t['transparency'] ?? 'opaque') !== 'transparent',
     ];
 }
@@ -155,6 +164,7 @@ try {
             'heute' => (new DateTimeImmutable('now', tz()))->format('Y-m-d'),
             'jetzt' => time(),
             'demo' => $cfg['modus'] === 'demo',
+            'treatwell' => twStatus($cfg),
         ]);
     }
 
@@ -522,6 +532,23 @@ try {
         terminAendern($cfg, $p['id'], $s['id'], ['extendedProperties' => ['private' => array_merge($priv, ['kunde' => $kundeId])]]);
         karteiBesuchSetzen($cfg, $kundeId, $s['id'], $p['id'], $s['beginn'], $s['leistung'], $s['leistungId'], $s['art']);
         antwort(200, ['ok' => true, 'kundeId' => $kundeId]);
+    }
+
+    /* ---------- Treatwell-E-Mails ---------- */
+
+    if ($a === 'treatwell-abruf' && $methode === 'POST') {
+        // Höchstens alle 2 Minuten wirklich ins Postfach schauen
+        $neu = 0;
+        if (time() - twZustand($cfg)['letzterAbruf'] >= 120) $neu = treatwellAbrufen($cfg)['neu'];
+        antwort(200, ['neu' => $neu, 'treatwell' => twStatus($cfg)]);
+    }
+
+    if ($a === 'hinweis-erledigt' && $methode === 'POST') {
+        $id = (string) (eingabe()['id'] ?? '');
+        $z = twZustand($cfg);
+        $z['hinweise'] = array_values(array_filter($z['hinweise'], fn($h) => $h['id'] !== $id));
+        twZustandSpeichern($cfg, $z);
+        antwort(200, ['ok' => true, 'treatwell' => twStatus($cfg)]);
     }
 
     if ($a === 'pause' && $methode === 'POST') {

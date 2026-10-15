@@ -16,6 +16,8 @@ termin/
 │   ├── web.php                     ← gemeinsame Hilfsfunktionen, Einstellungen (Pausieren)
 │   ├── kunden.php                  ← Kundenkartei (daten/kunden.json)
 │   ├── tabelle.php                 ← Excel (.xlsx) und CSV lesen/schreiben, ohne Zusatzbibliotheken
+│   ├── postfach.php                ← IMAP (nur lesend) und MIME, ohne PHP-Erweiterung „imap“
+│   ├── treatwell.php               ← Treatwell-Buchungs-E-Mails auswerten und eintragen
 │   ├── zeit.php                    ← Feiertage, Öffnungszeiten, freie Zeiten (reine Funktionen)
 │   ├── kalender.php                ← Google Calendar API über Dienstkonto, Demo-Modus
 │   └── mail.php                    ← Bestätigung, Absage, Info an den Salon
@@ -68,6 +70,7 @@ return [
     'cron_schluessel' => '…mind. 32 Zeichen…', // Schlüssel für den Aufruf von aufgaben.php durch den Cronjob
     'verwaltung_passwort' => 'y$…',         // password_hash() des Salon-Passworts fürs Dashboard
     'verwaltung_geheimnis' => '…mind. 32 Zeichen…', // signiert das Anmelde-Cookie; ändern = alle abmelden
+    'postfach' => ['host' => 'imap.ionos.de', 'port' => 993, 'benutzer' => 'friseur@andreazechmeister.at', 'passwort' => ''], // Treatwell-E-Mails; leer = aus
 ];
 ```
 
@@ -142,5 +145,6 @@ Unter **Kunden › Excel** im Dashboard:
 Treatwell muss noch etwa ein Jahr parallel laufen (Stand Oktober 2026).
 
 - **Unsere Termine → Treatwell:** In Treatwell Connect unter Team › Person › External Calendar die „Privatadresse im iCal-Format“ von „Buchungen Andrea“ bzw. „Buchungen Pamela“ eintragen (offizielle Funktion von Treatwell, nur frei/belegt). Anleitung für den Salon: `D:\Andrea Homepage\Treatwell verbinden.html`.
-- **Treatwell → Dashboard:** Treatwell gibt Buchungen nur an ausgewählte Salonprogramme weiter (Salonized, Clinic Software, Delete Waxing), nicht an Google. Deshalb im Dashboard beim Eintragen „Woher kommt der Termin? › Treatwell“ wählen: `quelle=treatwell`, Titel mit „(Treatwell)“, türkis im Dashboard, keine E-Mails und keine Erinnerung von uns (macht Treatwell), Hinweis, Änderungen auch in Treatwell vorzunehmen.
+- **Treatwell → Dashboard, automatisch:** Treatwell gibt Buchungen nur an ausgewählte Salonprogramme weiter (Salonized, Clinic Software, Delete Waxing), nicht an Google. Deshalb liest `treatwell-abruf.php` die Benachrichtigungs-E-Mails („Neue Treatwell Buchung (Unsere Ref. T…)“) aus dem Postfach friseur@andreazechmeister.at (IMAP, nur lesend, nur Absender mit „treatwell“, letzte 14 Tage) und trägt sie ein: Leistung(en) mit Dauer, Datum/Zeit, Mitarbeiterin, Kundenname (ohne Zusatz „Neu“), E-Mail, Telefon, Bezahlstatus („Vorab bezahlt“ wird im Dashboard deutlich angezeigt), Bestellnummer als `tw`. Gleiche Bestellnummer = derselbe Termin (keine Doppelten); ein schon von Hand eingetragener Treatwell-Termin zur selben Zeit wird nur verknüpft. Stornierungen (Betreff mit „storn“) löschen den Termin, Änderungen verschieben ihn. Was sich nicht sicher lesen lässt, Überschneidungen und Postfach-Fehler erscheinen oben im Dashboard als Hinweis. Abruf durch einen eigenen Cronjob (`treatwell-abruf.php?k=…`) und zusätzlich beim Öffnen des Dashboards (höchstens alle 2 Minuten). Das Postfach-Passwort steht nur in der Konfiguration auf dem Server (`postfach.passwort`, leer = aus). Tests: `php termin/tests/treatwell-test.php` mit echten, anonymisierten Treatwell-E-Mails.
+- **Treatwell → Dashboard, von Hand** (falls der Abruf aus ist): beim Eintragen „Woher kommt der Termin? › Treatwell“ wählen: `quelle=treatwell`, Titel mit „(Treatwell)“, türkis im Dashboard, keine E-Mails und keine Erinnerung von uns (macht Treatwell), Hinweis, Änderungen auch in Treatwell vorzunehmen.
 - Nach der Bindefrist: Verbindung in Treatwell lösen und die geheime iCal-Adresse in Google zurücksetzen.

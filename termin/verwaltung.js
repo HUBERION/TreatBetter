@@ -150,12 +150,21 @@
       <button type="button" class="side-link cta" data-act="neu">${ic('plus', 18, 2)}Eintragen</button>
     </div>
   </nav>
-  <main class="main" id="main">${inner}</main>
+  <main class="main" id="main">${treatwellHinweise()}${inner}</main>
 </div>`;
   }
 
+  /* Hinweise aus dem Treatwell-Abruf (Überschneidungen, unlesbare E-Mails, Postfach-Fehler) */
+  function treatwellHinweise() {
+    const tw = D && D.treatwell;
+    if (!tw || !tw.aktiv) return '';
+    const liste = (tw.hinweise || []).map((h) => `<div class="note warn" role="status">${ic('info', 20)}<div style="flex:1"><b>Treatwell</b><span>${esc(h.text)}</span>${h.betreff ? `<span class="muted small">E-Mail: ${esc(h.betreff)}</span>` : ''}</div><button type="button" class="mini" data-act="hinweis-erledigt" data-arg="${esc(h.id)}">Erledigt</button></div>`).join('');
+    const fehler = tw.fehler ? `<div class="note warn" role="alert">${ic('info', 20)}<div><b>Treatwell-E-Mails werden gerade nicht abgerufen</b><span>${esc(tw.fehler)}</span><span class="muted small">Bis das behoben ist, Treatwell-Buchungen bitte von Hand eintragen.</span></div></div>` : '';
+    return fehler + liste;
+  }
+
   function terminText(t) {
-    if (istKunde(t)) return (t.name || (t.anonym ? 'Kundin/Kunde' : 'Ohne Namen')) + (t.leistung ? ' · ' + t.leistung : '');
+    if (istKunde(t)) return (t.name || (t.anonym ? 'Kundin/Kunde' : 'Ohne Namen')) + (t.leistung ? ' · ' + t.leistung : '') + (t.twBezahlt === 'Vorab bezahlt' ? ' · bereits bezahlt' : '');
     return t.titel || 'Belegt';
   }
 
@@ -542,6 +551,8 @@
         zeilen.push(['Name', esc(t.name || (t.anonym ? 'nach 12 Monaten entfernt' : '–'))]);
         if (t.tel) zeilen.push(['Telefon', `<a href="tel:${esc(t.tel.replace(/[^\d+]/g, ''))}">${esc(t.tel)}</a>`]);
         if (t.mail) zeilen.push(['E-Mail', `<a href="mailto:${esc(t.mail)}">${esc(t.mail)}</a>`]);
+        if (t.twBezahlt) zeilen.push(['Bezahlung', t.twBezahlt === 'Vorab bezahlt' ? '<b>Vorab über Treatwell bezahlt – im Salon nicht kassieren</b>' : esc(t.twBezahlt) + ' – im Salon kassieren']);
+        if (t.twNr) zeilen.push(['Treatwell-Nr.', esc(t.twNr)]);
         if (t.art === 'treatwell') zeilen.push(['Hinweis', 'Über Treatwell gebucht. Verschieben oder Absagen bitte auch in Treatwell machen.']);
         else if (t.mail && zukunft) zeilen.push(['Erinnerung', t.erinnert ? 'verschickt' : 'wird am Vortag verschickt']);
       } else {
@@ -749,6 +760,9 @@
     },
     'neu-art': (art) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.art = art; M.konflikt = null; M.fehler = ''; M.felder = {}; dialogZeichnen(); },
     'dauer-eigen': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); const l = D.leistungen.find((x) => x.id === M.werte.leistung); M.werte.dauerEigen = true; M.werte.dauer = l ? l.min : ''; dialogZeichnen(); const el = dlg.querySelector('#f-dauer'); if (el) { el.focus(); el.select(); } },
+    'hinweis-erledigt': async (id) => {
+      try { const r = await api('hinweis-erledigt', {}, { id }); D.treatwell = r.treatwell; render(); } catch (e) { toast(e.message); }
+    },
     quelle: (q) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.quelle = q; dialogZeichnen(); },
     'dauer-vorgabe': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.dauerEigen = false; M.werte.dauer = ''; dialogZeichnen(); },
     detail: (arg) => dialogOeffnen({ typ: 'detail', arg }),
@@ -931,6 +945,7 @@
         angemeldet = true;
         render();
         laden();
+        treatwellAbruf();
       } catch (e) {
         document.getElementById('login-fehler').textContent = e.message;
         btn.disabled = false;
@@ -1004,6 +1019,17 @@
   window.addEventListener('hashchange', () => { window.scrollTo(0, 0); laden(); });
   // Alle 60 Sekunden still neu laden, wenn das Fenster sichtbar ist und kein Dialog offen ist
   setInterval(() => { if (angemeldet && !M && document.visibilityState === 'visible' && !['kunden', 'kunde'].includes(route().view)) laden(true); }, 60000);
+  setInterval(() => { if (angemeldet && document.visibilityState === 'visible') treatwellAbruf(); }, 120000);
+
+  // Neue Treatwell-E-Mails abholen lassen (der Server prüft höchstens alle 2 Minuten)
+  async function treatwellAbruf() {
+    if (!D || !D.treatwell || !D.treatwell.aktiv) { if (D) return; }
+    try {
+      const r = await api('treatwell-abruf', {}, {});
+      if (D) D.treatwell = r.treatwell;
+      if (r.neu > 0) { toast(r.neu === 1 ? '1 Treatwell-Buchung übernommen.' : r.neu + ' Treatwell-Buchungen übernommen.'); laden(true); } else if (!M) render();
+    } catch (e) { /* nicht schlimm, nächstes Mal wieder */ }
+  }
   document.addEventListener('visibilitychange', () => { if (angemeldet && !M && document.visibilityState === 'visible') laden(true); });
 
   (async function start() {
@@ -1015,6 +1041,6 @@
       return;
     }
     render();
-    if (angemeldet) laden();
+    if (angemeldet) { laden(); treatwellAbruf(); }
   })();
 })();
