@@ -1,27 +1,36 @@
 <?php
-/* Tägliche Aufgaben, gestartet von einem Cronjob bei IONOS (z. B. täglich um 08:00):
+/* Tägliche Aufgaben, gestartet von einem Cronjob bei IONOS (täglich morgens):
    1. Erinnerungs-E-Mail an alle, die morgen einen Online-Termin haben
    2. Name, E-Mail und Telefon aus Online-Terminen entfernen, die älter als REGELN['aufbewahrung'] Monate sind
-   Aufruf nur über die Kommandozeile: php termin/aufgaben.php */
+   Aufruf: php termin/aufgaben.php  oder  https://…/termin/aufgaben.php?k=<cron_schluessel aus der Konfiguration>
+   (Der IONOS-Cronjob-Manager kann nur Adressen aufrufen.) Mehrfaches Aufrufen schadet nicht. */
 
 declare(strict_types=1);
-
-if (PHP_SAPI !== 'cli') {
-    http_response_code(404);
-    exit;
-}
 
 require_once __DIR__ . '/lib/kalender.php';
 require_once __DIR__ . '/lib/mail.php';
 
 date_default_timezone_set('Europe/Vienna');
 
+$web = PHP_SAPI !== 'cli';
 $datei = getenv('TREATBETTER_CONFIG') ?: __DIR__ . '/../../treatbetter-privat/config.php';
 if (!is_file($datei)) {
+    if ($web) { http_response_code(404); exit; }
     fwrite(STDERR, "Konfiguration fehlt: $datei\n");
     exit(1);
 }
 $cfg = require $datei;
+if ($web) {
+    // Über das Internet nur mit dem geheimen Schlüssel, sonst wie eine nicht vorhandene Seite
+    $k = (string) ($_GET['k'] ?? '');
+    if (empty($cfg['cron_schluessel']) || strlen($cfg['cron_schluessel']) < 32 || !hash_equals($cfg['cron_schluessel'], $k)) {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    if (!defined('STDERR')) define('STDERR', fopen('php://output', 'w'));
+}
 $jetzt = time();
 $heute = new DateTimeImmutable('today', tz());
 $fehler = 0;
@@ -77,5 +86,8 @@ foreach (TEAM as $p) {
 $log = $cfg['daten'] . '/fehler.log';
 if (is_file($log) && filesize($log) > 200000) file_put_contents($log, substr((string) file_get_contents($log), -100000));
 
-echo date('Y-m-d H:i') . " Erinnerungen: $erinnert, Kundendaten entfernt: $geloescht" . ($fehler ? ", Fehler: $fehler" : '') . "\n";
+$zeile = date('Y-m-d H:i') . " Erinnerungen: $erinnert, Kundendaten entfernt: $geloescht" . ($fehler ? ", Fehler: $fehler" : '');
+@file_put_contents($cfg['daten'] . '/aufgaben.log', $zeile . "\n", FILE_APPEND | LOCK_EX);
+if ($web && $fehler) http_response_code(500);
+echo $zeile . "\n";
 exit($fehler ? 1 : 0);

@@ -59,6 +59,7 @@ return [
     'mail_aktiv' => true,                      // false = E-Mails nur als Dateien in daten/mails/
     'mail_an_salon' => true,                   // Info-Mail an den Salon bei jeder Buchung und Absage
     'salz' => '…zufällige Zeichenkette…',      // für die gehashte IP-Adresse in der Missbrauchsbremse
+    'cron_schluessel' => '…mind. 32 Zeichen…', // Schlüssel für den Aufruf von aufgaben.php durch den Cronjob
 ];
 ```
 
@@ -80,7 +81,7 @@ Für die Seite eine Konfiguration mit `'modus' => 'demo'` anlegen, `TREATBETTER_
 
 ## Tägliche Aufgaben (`aufgaben.php`)
 
-Ein Cronjob bei IONOS startet täglich, z. B. um 08:00, `php termin/aufgaben.php`. Über den Browser ist das Skript nicht aufrufbar.
+Der IONOS-Cronjob-Manager kann nur Adressen aufrufen. Deshalb ruft ein täglicher **WebCron** (morgens) `https://andreazechmeister.at/termin/aufgaben.php?k=…` auf. Der Schlüssel `k` steht als `cron_schluessel` (mindestens 32 Zeichen) in der Konfiguration; ohne ihn antwortet das Skript mit 404. Lokal geht auch `php termin/aufgaben.php`. Jeder Lauf wird in `daten/aufgaben.log` vermerkt.
 
 1. **Erinnerung:** E-Mail an alle, die morgen einen Online-Termin haben. Danach wird der Termin mit `erinnert=1` markiert, damit keine zweite E-Mail kommt.
 2. **Aufräumen:** Bei Online-Terminen, die länger als 12 Monate (`REGELN['aufbewahrung']`) zurückliegen, werden Name, E-Mail, Telefon und Storno-Prüfwert entfernt. Titel wird „Online-Termin – Leistung“.
