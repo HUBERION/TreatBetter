@@ -19,7 +19,8 @@
   const fmt = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
   const minOf = (ts) => { const d = new Date(ts * 1000); return d.getHours() * 60 + d.getMinutes(); };
   const endeText = (uhr, dauer) => (/^\d{2}:\d{2}$/.test(uhr || '') && Number(dauer) > 0 ? 'Endet um ' + fmt(toMin(uhr) + Number(dauer)) + ' Uhr.' : '');
-  const ART_TEXT = { online: 'Online', telefon: 'Telefon', block: 'Blockiert', kalender: 'Kalender' };
+  const ART_TEXT = { online: 'Online', telefon: 'Telefon', treatwell: 'Treatwell', block: 'Blockiert', kalender: 'Kalender' };
+  const istKunde = (t) => t.art === 'online' || t.art === 'telefon' || t.art === 'treatwell';
 
   const ICONS = {
     cal: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -154,7 +155,7 @@
   }
 
   function terminText(t) {
-    if (t.art === 'online' || t.art === 'telefon') return (t.name || (t.anonym ? 'Kundin/Kunde' : 'Ohne Namen')) + (t.leistung ? ' · ' + t.leistung : '');
+    if (istKunde(t)) return (t.name || (t.anonym ? 'Kundin/Kunde' : 'Ohne Namen')) + (t.leistung ? ' · ' + t.leistung : '');
     return t.titel || 'Belegt';
   }
 
@@ -199,7 +200,7 @@
         const a = t.ganztags ? Math.max(START, toMin(tag.von || '07:00')) : minOf(t.beginn);
         const b = t.ganztags ? Math.min(END, toMin(tag.bis || '20:00')) : minOf(t.ende);
         const zeit = t.ganztags ? 'ganztägig' : t.uhr + '–' + t.bis;
-        const cls = t.art === 'online' ? 'blk-book' : t.art === 'telefon' ? 'blk-book tel' : !t.blockiert ? 'blk-soft' : 'blk-block';
+        const cls = t.art === 'online' ? 'blk-book' : t.art === 'telefon' ? 'blk-book tel' : t.art === 'treatwell' ? 'blk-book tw' : !t.blockiert ? 'blk-soft' : 'blk-block';
         add(a, b, cls, esc(zeit + ' ' + ART_TEXT[t.art]), esc(terminText(t)), t);
       });
       if (r.datum === keyOf(jetzt) && nm >= START && nm <= END) blocks.push(`<div class="nowline" style="top:${y(nm)}px" aria-hidden="true"></div>`);
@@ -215,13 +216,13 @@
     for (let m = START; m < END; m += 60) labels.push(`<span style="top:${y(m) + 4}px">${fmt(m)}</span>`);
     const gridCols = `44px repeat(${D.team.length}, minmax(0, 1fr))`;
 
-    const liste = termine.filter((t) => t.art === 'online' || t.art === 'telefon').sort((a, b) => a.beginn - b.beginn).map((t) => `<div class="bk">
+    const liste = termine.filter(istKunde).sort((a, b) => a.beginn - b.beginn).map((t) => `<div class="bk">
       <div class="bk-top"><span class="bk-time">${esc(t.uhr)}</span>
         <div class="bk-main"><b><span class="art art-${t.art}">${ART_TEXT[t.art]}</span>${esc(t.name || 'Ohne Namen')}</b><span>${esc(t.leistung)} · ${esc(personName(t.person))} · bis ${esc(t.bis)}</span>
         ${t.tel ? `<span><a href="tel:${esc(t.tel.replace(/[^\d+]/g, ''))}">${esc(t.tel)}</a></span>` : ''}</div></div>
       <div class="bk-actions"><button type="button" class="mini" data-act="detail" data-arg="${esc(t.person)}|${esc(t.id)}">Details</button></div>
     </div>`).join('') || `<p class="muted" style="font-size:14px;padding:8px 0">${tag.zu ? 'Geschlossen.' : 'Noch keine Kundentermine an diesem Tag.'}</p>`;
-    const anzahl = termine.filter((t) => t.art === 'online' || t.art === 'telefon').length;
+    const anzahl = termine.filter(istKunde).length;
 
     return `${kopf}
 <div class="split">
@@ -238,6 +239,7 @@
       <div class="legend">
         <div><span class="sw" style="background:#7B2D8E"></span>Online gebucht</div>
         <div><span class="sw" style="background:#3D5A80"></span>Telefonisch eingetragen</div>
+        <div><span class="sw" style="background:#00756A"></span>Über Treatwell gebucht</div>
         <div><span class="sw" style="background:#E6E2EA;border-left:4px solid #9A95A1"></span>Blockiert (Pause, Urlaub …) oder direkt im Google Kalender eingetragen</div>
         <div><span class="sw" style="background:repeating-linear-gradient(135deg,#DDD8E2 0 4px,#F8F7FA 4px 8px)"></span>Geschlossen bzw. online nicht buchbar</div>
       </div>
@@ -263,7 +265,7 @@
       const liste = D.termine.filter((x) => x.tag === t.tag || (x.ganztags && x.beginn <= start && x.ende > start));
       const items = liste.map((x) => `<button type="button" class="wk-item" data-act="detail" data-arg="${esc(x.person)}|${esc(x.id)}">
         <b>${x.ganztags ? 'Tag' : esc(x.uhr)}</b><span><span class="art art-${x.art}">${esc(personName(x.person))}</span>${esc(terminText(x))}</span></button>`).join('');
-      const kunden = liste.filter((x) => x.art === 'online' || x.art === 'telefon').length;
+      const kunden = liste.filter(istKunde).length;
       return `<section class="wk-day${t.tag === heute ? ' heute' : ''}">
         <div class="wk-head"><a href="#/tag/${t.tag}">${esc(shortDate(t.tag))}</a><span class="muted small">${t.zu ? 'geschlossen' : kunden + ' Kund' + (kunden === 1 ? 'e' : 'en')}</span></div>
         ${items || `<span class="muted small">${t.zu ? (t.hinweis ? esc(t.hinweis) : 'Geschlossen') : 'Noch nichts eingetragen'}</span>`}
@@ -476,7 +478,12 @@
              ${!eigene ? `<div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-vorgabe">Vorgabe ${vorgabe.min} Min. verwenden</button></div>` : '<div></div>'}`
           : `<div class="field"><span class="sublabel">Dauer</span><span style="min-height:48px;display:flex;align-items:center">${vorgabe ? vorgabe.min : ''} Min. (Vorgabe)</span></div>
              <div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-eigen">Dauer selbst eintragen</button></div>`;
-        felder = `<div class="grid2">
+        felder = `<div class="field"><span class="sublabel">Woher kommt der Termin?</span>
+          <div class="seg" role="group" aria-label="Woher kommt der Termin?">
+            <button type="button" data-act="quelle" data-arg="telefon" aria-pressed="${f.quelle !== 'treatwell'}">Telefon / vor Ort</button>
+            <button type="button" data-act="quelle" data-arg="treatwell" aria-pressed="${f.quelle === 'treatwell'}">Treatwell</button>
+          </div></div>
+        <div class="grid2">
           ${auswahlPerson('person', f.person)}
           <div class="field"><label for="f-leistung">Leistung</label><select id="f-leistung" name="leistung" data-change="leistung">${D.leistungen.map((l) => `<option value="${l.id}"${f.leistung === l.id ? ' selected' : ''}>${esc(l.voll)} (${l.min} Min.)</option>`).join('')}
             <option value="eigene"${eigene ? ' selected' : ''}>Andere Tätigkeit (selbst eintragen) …</option></select></div>
@@ -499,7 +506,9 @@
           ${feld('tel', 'Telefon (freiwillig)', 'tel', f.tel, ' autocomplete="off" maxlength="25"')}
           ${feld('mail', 'E-Mail (freiwillig)', 'email', f.mail, ' autocomplete="off" maxlength="120"')}
         </div>
-        <label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Bestätigung per E-Mail schicken (nur wenn E-Mail angegeben; dann auch Erinnerung am Vortag)</label>
+        ${f.quelle === 'treatwell'
+          ? '<p class="muted small">Treatwell schickt der Kundin Bestätigung und Erinnerung selbst. Von hier geht keine E-Mail raus.</p>'
+          : `<label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Bestätigung per E-Mail schicken (nur wenn E-Mail angegeben; dann auch Erinnerung am Vortag)</label>`}
         ${f.kunde ? '' : `<label class="check"><input type="checkbox" name="kartei"${f.kartei ? ' checked' : ''}> In der Kundenkartei speichern (Stammkundin bzw. Stammkunde)</label>`}`;
       } else {
         const gruende = ['Pause', 'Arzttermin', 'Frei', 'Urlaub', 'Krank', 'Sonstiges'];
@@ -521,7 +530,7 @@
     } else if (M.typ === 'detail') {
       const t = termin(M.arg);
       if (!t) { dialogSchliessen(); return; }
-      const kunde = t.art === 'online' || t.art === 'telefon';
+      const kunde = istKunde(t);
       const zukunft = t.beginn > Date.now() / 1000;
       const zeilen = [
         ['Wann', esc(longDate(t.tag)) + '<br>' + (t.ganztags ? 'ganztägig' : esc(t.uhr) + '–' + esc(t.bis) + ' Uhr')],
@@ -533,7 +542,8 @@
         zeilen.push(['Name', esc(t.name || (t.anonym ? 'nach 12 Monaten entfernt' : '–'))]);
         if (t.tel) zeilen.push(['Telefon', `<a href="tel:${esc(t.tel.replace(/[^\d+]/g, ''))}">${esc(t.tel)}</a>`]);
         if (t.mail) zeilen.push(['E-Mail', `<a href="mailto:${esc(t.mail)}">${esc(t.mail)}</a>`]);
-        if (t.mail && zukunft) zeilen.push(['Erinnerung', t.erinnert ? 'verschickt' : 'wird am Vortag verschickt']);
+        if (t.art === 'treatwell') zeilen.push(['Hinweis', 'Über Treatwell gebucht. Verschieben oder Absagen bitte auch in Treatwell machen.']);
+        else if (t.mail && zukunft) zeilen.push(['Erinnerung', t.erinnert ? 'verschickt' : 'wird am Vortag verschickt']);
       } else {
         zeilen.push(['Titel', esc(t.titel || '–')]);
         if (t.notiz) zeilen.push(['Notiz', esc(t.notiz)]);
@@ -551,7 +561,7 @@
         </div>
         ${M.absagen ? `<div class="panel" style="background:#FDF6F5;border-color:#F0D2CE">
           <b>${kunde ? 'Termin wirklich absagen?' : 'Eintrag wirklich löschen?'}</b>
-          ${kunde && t.mail && zukunft ? `<label class="check" style="margin-top:6px"><input type="checkbox" id="absage-mail" checked> Kundin bzw. Kunde per E-Mail informieren</label>` : kunde && zukunft ? '<p class="muted small" style="margin-top:6px">Keine E-Mail hinterlegt: Bitte telefonisch Bescheid geben.</p>' : ''}
+          ${t.art === 'treatwell' ? '<p class="small" style="margin-top:6px">Bitte den Termin auch in Treatwell stornieren, damit die Kundin informiert wird.</p>' : kunde && t.mail && zukunft ? `<label class="check" style="margin-top:6px"><input type="checkbox" id="absage-mail" checked> Kundin bzw. Kunde per E-Mail informieren</label>` : kunde && zukunft ? '<p class="muted small" style="margin-top:6px">Keine E-Mail hinterlegt: Bitte telefonisch Bescheid geben.</p>' : ''}
           <div class="knoepfe" style="margin-top:10px"><button type="button" class="btn-outline" data-act="absagen-nein">Doch nicht</button>
           <button type="button" class="btn-danger" data-act="absagen-ja"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird gelöscht …' : kunde ? 'Ja, absagen' : 'Ja, löschen'}</button></div>
         </div>` : ''}`;
@@ -563,7 +573,7 @@
         <p class="muted">${esc(terminText(t))} · bisher ${esc(shortDate(t.tag))}, ${esc(t.uhr)} Uhr bei ${esc(personName(t.person))}</p>
         <form class="stack" data-submit="verschieben" novalidate>
           <div class="grid2">${auswahlPerson('nach', f.nach)}<div></div>${feld('tag', 'Neues Datum', 'date', f.tag, ' required')}${feld('uhr', 'Neue Uhrzeit', 'time', f.uhr, ' step="300" required')}${t.ganztags ? '' : feld('dauer', 'Dauer in Minuten', 'number', f.dauer, ' min="5" max="600" step="5" inputmode="numeric" required')}<p class="muted small" id="ende-hinweis" aria-live="polite" style="align-self:end">${endeText(f.uhr, f.dauer)}</p></div>
-          ${t.mail && (t.art === 'online' || t.art === 'telefon') ? `<label class="check"><input type="checkbox" name="mail"${f.mail ? ' checked' : ''}> Kundin bzw. Kunde per E-Mail informieren</label>` : (t.art === 'online' || t.art === 'telefon') ? '<p class="muted small">Keine E-Mail hinterlegt: Bitte telefonisch Bescheid geben.</p>' : ''}
+          ${t.art === 'treatwell' ? '<div class="note warn"><div><b>Treatwell-Termin</b><span>Bitte den Termin auch in Treatwell verschieben, damit die Kundin informiert wird.</span></div></div>' : t.mail && istKunde(t) ? `<label class="check"><input type="checkbox" name="mail"${f.mail ? ' checked' : ''}> Kundin bzw. Kunde per E-Mail informieren</label>` : istKunde(t) ? '<p class="muted small">Keine E-Mail hinterlegt: Bitte telefonisch Bescheid geben.</p>' : ''}
           ${konfliktHtml()}${fehlerHtml()}
           <div class="knoepfe">${M.konflikt ? '<button type="button" class="btn-outline" data-act="trotzdem">Trotzdem verschieben</button>' : ''}
           <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird verschoben …' : 'Verschieben'}</button></div>
@@ -671,7 +681,7 @@
       let gemailt = false;
       for (const person of personen) {
         const body = f.art === 'termin'
-          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit, dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail, mailSenden: f.mailSenden && !!f.mail, kundeId: f.kunde ? f.kunde.id : '', kartei: !f.kunde && !!f.kartei, trotzdem: !!trotzdem }
+          ? { art: 'termin', person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit, dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail, quelle: f.quelle, mailSenden: f.mailSenden && !!f.mail && f.quelle !== 'treatwell', kundeId: f.kunde ? f.kunde.id : '', kartei: !f.kunde && !!f.kartei, trotzdem: !!trotzdem }
           : { art: 'block', person, tag: f.tag, bisTag: f.bisTag, ganztags: !!f.ganztags, uhr: f.uhr, bis: f.bis, grund: f.grund, notiz: f.notiz };
         const r = await api('eintragen', {}, body);
         gemailt = gemailt || r.gemailt;
@@ -724,7 +734,7 @@
     const tag = r.datum || keyOf(new Date());
     dialogOeffnen({
       typ: 'neu',
-      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, dauerEigen: false, dauer: '', taetigkeit: '', kunde: null, kartei: true, grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
+      werte: Object.assign({ art: 'termin', person: D ? D.team[0].id : 'andrea', tag, uhr: '', bis: '', leistung: D ? D.leistungen[0].id : '', name: '', tel: '', mail: '', mailSenden: true, dauerEigen: false, dauer: '', taetigkeit: '', kunde: null, kartei: true, quelle: 'telefon', grund: 'Pause', ganztags: false, notiz: '' }, vorgaben || {}),
       felder: {},
     });
   }
@@ -739,6 +749,7 @@
     },
     'neu-art': (art) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.art = art; M.konflikt = null; M.fehler = ''; M.felder = {}; dialogZeichnen(); },
     'dauer-eigen': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); const l = D.leistungen.find((x) => x.id === M.werte.leistung); M.werte.dauerEigen = true; M.werte.dauer = l ? l.min : ''; dialogZeichnen(); const el = dlg.querySelector('#f-dauer'); if (el) { el.focus(); el.select(); } },
+    quelle: (q) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.quelle = q; dialogZeichnen(); },
     'dauer-vorgabe': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.dauerEigen = false; M.werte.dauer = ''; dialogZeichnen(); },
     detail: (arg) => dialogOeffnen({ typ: 'detail', arg }),
     'such-detail': (arg) => dialogOeffnen({ typ: 'detail', arg, liste: suche.treffer }),
@@ -758,7 +769,7 @@
       try {
         const r = await api('absagen', {}, { person: t.person, id: t.id, mail });
         dialogSchliessen();
-        toast((t.art === 'online' || t.art === 'telefon' ? 'Termin abgesagt' : 'Eintrag gelöscht') + (r.gemailt ? ', E-Mail verschickt.' : '.'));
+        toast((istKunde(t) ? 'Termin abgesagt' : 'Eintrag gelöscht') + (r.gemailt ? ', E-Mail verschickt.' : '.'));
         if (suche.treffer) suche.treffer = suche.treffer.filter((x) => !(x.person === t.person && x.id === t.id));
         laden(true);
       } catch (e) {

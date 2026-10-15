@@ -65,7 +65,8 @@ function adminSicht(array $t, string $person): array
 {
     [$b, $e, $ganztags] = terminZeit($t);
     $priv = $t['extendedProperties']['private'] ?? [];
-    $art = isset($priv['tb']) ? (($priv['quelle'] ?? '') === 'telefon' ? 'telefon' : 'online')
+    $quelle = $priv['quelle'] ?? '';
+    $art = isset($priv['tb']) ? (in_array($quelle, ['telefon', 'treatwell'], true) ? $quelle : 'online')
         : (isset($priv['tbb']) ? 'block' : 'kalender');
     $l = leistung($priv['leistung'] ?? '');
     return [
@@ -187,22 +188,24 @@ try {
                 karteiAendern($cfg, function (array &$liste) use ($karte) { $liste[] = $karte; });
                 $kundeId = $karte['id'];
             }
-            $token = $mail !== '' ? neuerToken() : '';
+            // Treatwell-Termine: Treatwell bestätigt und erinnert selbst, deshalb keine E-Mails und kein Storno-Link von uns
+            $quelle = ($d['quelle'] ?? '') === 'treatwell' ? 'treatwell' : 'telefon';
+            $token = $mail !== '' && $quelle === 'telefon' ? neuerToken() : '';
             $id = terminEintragen($cfg, $p['id'], [
-                'summary' => $name . ' – ' . $voll,
-                'description' => "Telefonisch eingetragen\nLeistung: $voll" . ($tel !== '' ? "\nTelefon: $tel" : '') . ($mail !== '' ? "\nE-Mail: $mail" : ''),
+                'summary' => $name . ' – ' . $voll . ($quelle === 'treatwell' ? ' (Treatwell)' : ''),
+                'description' => ($quelle === 'treatwell' ? 'Über Treatwell gebucht' : 'Telefonisch eingetragen') . "\nLeistung: $voll" . ($tel !== '' ? "\nTelefon: $tel" : '') . ($mail !== '' ? "\nE-Mail: $mail" : ''),
                 'start' => ['dateTime' => rfc3339($beginn), 'timeZone' => 'Europe/Vienna'],
                 'end' => ['dateTime' => rfc3339($ende), 'timeZone' => 'Europe/Vienna'],
                 'transparency' => 'opaque',
                 'extendedProperties' => ['private' => [
-                    'tb' => '1', 'quelle' => 'telefon', 'tok' => $token !== '' ? stornoHash($token) : '',
+                    'tb' => '1', 'quelle' => $quelle, 'tok' => $token !== '' ? stornoHash($token) : '',
                     'leistung' => $eigene ? 'eigene' : $l['id'], 'taetigkeit' => $eigene ? $taetigkeit : '',
                     'name' => $name, 'mail' => $mail, 'tel' => $tel, 'kunde' => $kundeId,
                 ]],
             ]);
-            if ($kundeId !== '') karteiBesuchSetzen($cfg, $kundeId, $id, $p['id'], $beginn, $voll, $eigene ? '' : $l['id'], 'telefon');
+            if ($kundeId !== '') karteiBesuchSetzen($cfg, $kundeId, $id, $p['id'], $beginn, $voll, $eigene ? '' : $l['id'], $quelle);
             $gemailt = false;
-            if ($mail !== '' && !empty($d['mailSenden'])) {
+            if ($mail !== '' && !empty($d['mailSenden']) && $quelle === 'telefon') {
                 try {
                     mailBestaetigung(['mail_an_salon' => false] + $cfg, [
                         'id' => $id, 'beginn' => $beginn, 'ende' => $ende, 'leistung' => $voll, 'person' => $p['name'],
@@ -322,7 +325,7 @@ try {
             // Google sucht im Titel und in der Beschreibung; danach genauer nach Name und Telefon filtern
             foreach (adminTermine($cfg, $p['id'], $von, $bis, $cfg['modus'] === 'demo' ? null : $q) as $t) {
                 $s = adminSicht($t, $p['id']);
-                if ($s['art'] !== 'online' && $s['art'] !== 'telefon') continue;
+                if (!in_array($s['art'], ['online', 'telefon', 'treatwell'], true)) continue;
                 $passt = str_contains(mb_strtolower($s['name']), $klein)
                     || (strlen($ziffern) >= 4 && str_contains(preg_replace('/\D/', '', $s['tel']), $ziffern))
                     || str_contains(mb_strtolower($s['mail']), $klein);
@@ -506,7 +509,7 @@ try {
         $p = personPruefen((string) ($d['person'] ?? ''));
         $t = terminHolen($cfg, $p['id'], (string) ($d['termin'] ?? '')) ?? antwort(404, ['fehler' => 'Der Termin wurde nicht gefunden.']);
         $s = adminSicht($t, $p['id']);
-        if ($s['art'] !== 'online' && $s['art'] !== 'telefon') antwort(400, ['fehler' => 'Nur Kundentermine lassen sich zuordnen.']);
+        if (!in_array($s['art'], ['online', 'telefon', 'treatwell'], true)) antwort(400, ['fehler' => 'Nur Kundentermine lassen sich zuordnen.']);
         $kundeId = (string) ($d['kundeId'] ?? '');
         if ($kundeId === '') {
             $karte = neueKarte($s['name'], $s['tel'], $s['mail'], '');

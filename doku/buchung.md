@@ -136,3 +136,11 @@ Unter **Kunden › Excel** im Dashboard:
 - **Kartei als Excel exportieren:** alle Karten mit letztem Besuch, nächstem Termin, Anzahl Besuche und Löschdatum. Der Export lässt sich wieder importieren.
 
 `lib/tabelle.php` liest und schreibt Zip und `.xlsx` selbst (nur `zlib`/`gzinflate`, keine Erweiterung `zip` nötig). Getestet mit Dateien, die Excel selbst gespeichert hat.
+
+## Treatwell während der Bindefrist
+
+Treatwell muss noch etwa ein Jahr parallel laufen (Stand Oktober 2026).
+
+- **Unsere Termine → Treatwell:** In Treatwell Connect unter Team › Person › External Calendar die „Privatadresse im iCal-Format“ von „Buchungen Andrea“ bzw. „Buchungen Pamela“ eintragen (offizielle Funktion von Treatwell, nur frei/belegt). Anleitung für den Salon: `D:\Andrea Homepage\Treatwell verbinden.html`.
+- **Treatwell → Dashboard:** Treatwell gibt Buchungen nur an ausgewählte Salonprogramme weiter (Salonized, Clinic Software, Delete Waxing), nicht an Google. Deshalb im Dashboard beim Eintragen „Woher kommt der Termin? › Treatwell“ wählen: `quelle=treatwell`, Titel mit „(Treatwell)“, türkis im Dashboard, keine E-Mails und keine Erinnerung von uns (macht Treatwell), Hinweis, Änderungen auch in Treatwell vorzunehmen.
+- Nach der Bindefrist: Verbindung in Treatwell lösen und die geheime iCal-Adresse in Google zurücksetzen.

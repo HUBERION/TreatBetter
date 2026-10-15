@@ -468,3 +468,5 @@ dialog.modal::backdrop { background: rgba(24, 22, 29, 0.45); }
 }
 .vorschlaege { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .vorschlaege:empty { display: none; }
+.blk-book.tw { background: #00756A; }
+.art-treatwell { background: #00756A; color: #FFFFFF; }

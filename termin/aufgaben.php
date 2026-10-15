@@ -44,7 +44,8 @@ foreach (TEAM as $p) {
     try {
         foreach (eigeneBuchungen($cfg, $p['id'], $von, $bis) as $t) {
             $priv = $t['extendedProperties']['private'];
-            if (!empty($priv['erinnert']) || empty($priv['mail'])) continue;
+            // Treatwell erinnert seine Kund:innen selbst
+            if (!empty($priv['erinnert']) || empty($priv['mail']) || ($priv['quelle'] ?? '') === 'treatwell') continue;
             [$beginn, $ende] = terminZeit($t);
             mailErinnerung($cfg, ['beginn' => $beginn, 'leistung' => leistungAusTermin($priv), 'person' => $p['name'],
                 'name' => $priv['name'] ?? '', 'mail' => $priv['mail']]);
