@@ -46,21 +46,27 @@ function datumLang(int $ts): string
     return $tage[(int) $d->format('w')] . ', ' . $d->format('j') . '. ' . $monate[(int) $d->format('n')] . ' ' . $d->format('Y');
 }
 
-function icsDatei(string $uid, int $beginn, int $ende, string $titel): string
+function icsDatei(string $uid, int $beginn, int $ende, string $titel, bool $abgesagt = false, ?string $an = null): string
 {
     $f = fn(int $ts) => gmdate('Ymd\THis\Z', $ts);
     $esc = fn(string $s) => addcslashes($s, ",;\\");
-    return implode("\r\n", [
-        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Friseur Andrea Zechmeister//Online-Buchung//DE', 'METHOD:PUBLISH',
+    // Gleiche UID bei Buchung und Absage, damit Kalender-Apps die Absage dem Termin zuordnen können
+    $zeilen = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Friseur Andrea Zechmeister//Online-Buchung//DE',
+        'METHOD:' . ($abgesagt ? 'CANCEL' : 'PUBLISH'),
         'BEGIN:VEVENT',
         'UID:' . $uid . '@andreazechmeister.at',
+        'SEQUENCE:' . ($abgesagt ? 1 : 0),
         'DTSTAMP:' . $f(time()),
         'DTSTART:' . $f($beginn),
         'DTEND:' . $f($ende),
-        'SUMMARY:' . $esc($titel),
+        'SUMMARY:' . $esc(($abgesagt ? 'Abgesagt: ' : '') . $titel),
         'LOCATION:' . $esc(SALON['name'] . ', ' . SALON['strasse'] . ', ' . SALON['ort']),
-        'END:VEVENT', 'END:VCALENDAR', '',
-    ]);
+        'ORGANIZER;CN=' . $esc(SALON['name']) . ':mailto:' . SALON['mail'],
+    ];
+    if ($an !== null) $zeilen[] = 'ATTENDEE;ROLE=REQ-PARTICIPANT:mailto:' . $an;
+    $zeilen[] = 'STATUS:' . ($abgesagt ? 'CANCELLED' : 'CONFIRMED');
+    return implode("\r\n", array_merge($zeilen, ['END:VEVENT', 'END:VCALENDAR', '']));
 }
 
 function telefonText(): string
@@ -84,7 +90,7 @@ function mailBestaetigung(array $cfg, array $b): void
         . "Danach bitte telefonisch absagen: " . telefonText() . "\n\n"
         . "Bis bald!\n" . SALON['name'] . "\n";
     mailSenden($cfg, $b['mail'], 'Dein Termin am ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
-        icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name']));
+        icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], false, $b['mail']));
 
     if (!empty($cfg['mail_an_salon'])) {
         mailSenden($cfg, SALON['mail'], 'Neue Online-Buchung: ' . datumLang($b['beginn']) . ' ' . hhmm($b['beginn']) . ' ' . $b['person'],
@@ -104,8 +110,11 @@ function mailStorno(array $cfg, array $b): void
     mailSenden($cfg, $b['mail'], 'Termin abgesagt: ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr',
         "Hallo {$b['name']},\n\n"
         . "dein Termin am " . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . " Uhr ({$b['leistung']}) ist abgesagt.\n\n"
+        . "Falls du den Termin in deinem Kalender gespeichert hast: Im Anhang ist die Absage dazu. "
+        . "Viele Kalender-Apps entfernen den Termin damit von selbst, sonst bitte einfach löschen.\n\n"
         . "Einen neuen Termin kannst du jederzeit online buchen: {$cfg['basis_url']}\n\n"
-        . "Liebe Grüße\n" . SALON['name'] . "\n");
+        . "Liebe Grüße\n" . SALON['name'] . "\n",
+        icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], true, $b['mail']));
     if (!empty($cfg['mail_an_salon'])) {
         mailSenden($cfg, SALON['mail'], 'Online-Buchung abgesagt: ' . datumLang($b['beginn']) . ' ' . hhmm($b['beginn']) . ' ' . $b['person'],
             "Eine Online-Buchung wurde von der Kundin bzw. vom Kunden abgesagt.\n\n"

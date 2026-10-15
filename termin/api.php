@@ -208,7 +208,7 @@ try {
         if (!$info['stornierbar']) antwort(409, ['fehler' => 'Online absagen ist nicht mehr möglich. Bitte ruf uns an: ' . telefonText()]);
         terminLoeschen($cfg, $treffer['person'], (string) $t['id']);
         try {
-            mailStorno($cfg, ['beginn' => $beginn, 'leistung' => $info['leistung'], 'person' => $info['person'],
+            mailStorno($cfg, ['id' => (string) $t['id'], 'beginn' => $beginn, 'ende' => $ende, 'leistung' => $info['leistung'], 'person' => $info['person'],
                 'name' => $priv['name'] ?? '', 'mail' => $priv['mail'] ?? '']);
         } catch (Throwable $e) {
             protokoll($cfg, 'Mail fehlgeschlagen: ' . $e->getMessage());
