@@ -64,6 +64,12 @@
 
   /* ---------- Ansichten ---------- */
   function viewStart() {
+    if (D.pausiert) {
+      return `${head()}
+<div class="hero"><h1><img class="logo" src="logo.jpg" alt="Friseur Andrea Zechmeister" width="1600" height="653"></h1></div>
+<div class="done"><h1>Online-Buchung gerade pausiert</h1><p>Im Moment kannst du online keinen Termin buchen. Ruf uns gerne an, wir finden einen Termin für dich: ${telLinks()}</p></div>
+<div class="after"><a class="btn-soft" href="../">Zur Homepage</a></div>`;
+    }
     const gruppen = [];
     D.leistungen.forEach((l) => {
       let g = gruppen.find((x) => x.name === l.gruppe);

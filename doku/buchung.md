@@ -8,8 +8,12 @@ Die Buchungsseite für echte Termine. Sie läuft auf dem IONOS-Webhosting des Sa
 termin/
 ├── index.html, app.js, style.css   ← Kundenseite (Vanilla JS, kein Build), Aussehen aus docs/
 ├── api.php                         ← Schnittstelle: stamm, woche, buchen, termin, storno
+├── verwaltung.html, verwaltung.js   ← Dashboard für den Salon (Login mit Salon-Passwort)
+├── verwaltung.php                  ← Schnittstelle des Dashboards
+├── aufgaben.php                    ← täglicher Cronjob: Erinnerungen, alte Kundendaten entfernen
 ├── lib/
 │   ├── salon.php                   ← Leistungen, Team, Öffnungszeiten, Regeln
+│   ├── web.php                     ← gemeinsame Hilfsfunktionen, Einstellungen (Pausieren)
 │   ├── zeit.php                    ← Feiertage, Öffnungszeiten, freie Zeiten (reine Funktionen)
 │   ├── kalender.php                ← Google Calendar API über Dienstkonto, Demo-Modus
 │   └── mail.php                    ← Bestätigung, Absage, Info an den Salon
@@ -60,6 +64,8 @@ return [
     'mail_an_salon' => true,                   // Info-Mail an den Salon bei jeder Buchung und Absage
     'salz' => '…zufällige Zeichenkette…',      // für die gehashte IP-Adresse in der Missbrauchsbremse
     'cron_schluessel' => '…mind. 32 Zeichen…', // Schlüssel für den Aufruf von aufgaben.php durch den Cronjob
+    'verwaltung_passwort' => 'y$…',         // password_hash() des Salon-Passworts fürs Dashboard
+    'verwaltung_geheimnis' => '…mind. 32 Zeichen…', // signiert das Anmelde-Cookie; ändern = alle abmelden
 ];
 ```
 
@@ -91,3 +97,18 @@ Der IONOS-Cronjob-Manager kann nur Adressen aufrufen. Deshalb ruft ein tägliche
 - Upload auf IONOS, Konfiguration und Schlüssel im privaten Ordner, Cronjob einrichten
 - Test mit dem echten Kalender
 - Beim Livegang: neue `datenschutz.html` der Homepage hochladen, Buchungsknopf auf der Homepage ergänzen
+
+## Dashboard (`verwaltung.html`)
+
+Für Andrea und Pamela, am Salon-Handy und am Salon-PC: **andreazechmeister.at/termin/verwaltung.html**. Damit müssen sie nicht im Google Kalender arbeiten, der bleibt aber im Hintergrund der Speicher.
+
+- **Anmeldung:** ein gemeinsames Salon-Passwort (`verwaltung_passwort`, nur als Hash in der Konfiguration). Danach bleibt man 30 Tage angemeldet. Das Cookie `tb_verwaltung` enthält nur Ablaufzeit und Signatur (`verwaltung_geheimnis`), ist `HttpOnly`, `Secure`, `SameSite=Strict` und technisch notwendig, also ohne Cookie-Banner. Höchstens 10 Anmeldeversuche pro Stunde und IP.
+- **Tag:** Andrea und Pamela nebeneinander; in eine freie Stelle tippen öffnet „Eintragen“ mit Person und Uhrzeit.
+- **Woche:** sieben Tage auf einen Blick.
+- **Eintragen:** Kundentermin (telefonisch) oder Zeit blockieren (Pause, Arzttermin, Frei, Urlaub, Krank, Sonstiges, auch ganztägig über mehrere Tage, auch für beide). Bei Überschneidungen kommt eine Warnung mit „Trotzdem eintragen“.
+- **Telefonische Termine** mit E-Mail-Adresse bekommen auf Wunsch Bestätigung, Absage-Link und Erinnerung wie Online-Buchungen.
+- **Verschieben** (auch zur anderen Person) und **Absagen**, jeweils auf Wunsch mit E-Mail an die Kundin. Beim Verschieben gibt es einen neuen Absage-Link, der alte gilt nicht mehr.
+- **Kundensuche** nach Name, Telefon oder E-Mail (letzte 12 Monate und alle kommenden Termine).
+- **Einstellungen:** Online-Buchung je Person pausieren (`daten/einstellungen.json`). Die Kundenseite blendet pausierte Personen sofort aus.
+
+Nur das Dashboard liest Titel und Beschreibung von Terminen, und nur aus den beiden Buchungskalendern des Salons. Schreibende Anfragen brauchen zusätzlich den Kopf `X-Verwaltung: 1`.

@@ -124,6 +124,58 @@ function terminAendern(array $cfg, string $person, string $id, array $aenderung)
     googleAnfrage($cfg, 'PATCH', '/calendars/' . rawurlencode(kalenderId($cfg, $person)) . '/events/' . rawurlencode($id), [], $aenderung);
 }
 
+/* Alle Termine eines Buchungskalenders in [von, bis) für das Dashboard, mit Titel.
+   Nur für die beiden Buchungskalender des Salons, nie für private Kalender. */
+function adminTermine(array $cfg, string $person, int $von, int $bis, ?string $suche = null): array
+{
+    if ($cfg['modus'] === 'demo') {
+        $termine = demoTermine($cfg, $person);
+    } else {
+        $q = ['timeMin' => rfc3339($von), 'timeMax' => rfc3339($bis)];
+        if ($suche !== null) $q['q'] = $suche;
+        $termine = googleTermine($cfg, kalenderId($cfg, $person), $q, true);
+    }
+    return array_values(array_filter($termine, function ($t) use ($von, $bis) {
+        if (($t['status'] ?? '') === 'cancelled') return false;
+        [$b, $e] = terminZeit($t);
+        return $e > $von && $b < $bis;
+    }));
+}
+
+function terminHolen(array $cfg, string $person, string $id): ?array
+{
+    if ($cfg['modus'] === 'demo') {
+        foreach (demoTermine($cfg, $person) as $t) if ($t['id'] === $id) return $t;
+        return null;
+    }
+    try {
+        $t = googleAnfrage($cfg, 'GET', '/calendars/' . rawurlencode(kalenderId($cfg, $person)) . '/events/' . rawurlencode($id),
+            ['fields' => 'id,status,start,end,transparency,summary,description,extendedProperties']);
+    } catch (KalenderFehler $e) {
+        return null;
+    }
+    return ($t['status'] ?? '') === 'cancelled' ? null : $t;
+}
+
+/* Termin in den Kalender einer anderen Person verschieben (Termin-ID bleibt gleich). */
+function terminUmziehen(array $cfg, string $von, string $nach, string $id): void
+{
+    if ($von === $nach) return;
+    if ($cfg['modus'] === 'demo') {
+        $alle = demoLaden($cfg);
+        foreach ($alle[$von] ?? [] as $i => $t) {
+            if ($t['id'] !== $id) continue;
+            $alle[$nach][] = $t;
+            array_splice($alle[$von], $i, 1);
+            break;
+        }
+        demoSpeichern($cfg, $alle);
+        return;
+    }
+    googleAnfrage($cfg, 'POST', '/calendars/' . rawurlencode(kalenderId($cfg, $von)) . '/events/' . rawurlencode($id) . '/move',
+        ['destination' => kalenderId($cfg, $nach)]);
+}
+
 /* Anzahl eigener Buchungen einer Person an einem Tag (für die Verteilung bei „Beliebig“). */
 function buchungenAmTag(array $cfg, string $person, string $key): int
 {
@@ -139,13 +191,14 @@ function rfc3339(int $ts): string
 
 /* ---------- Google Calendar API ---------- */
 
-function googleTermine(array $cfg, string $kalender, array $filter): array
+function googleTermine(array $cfg, string $kalender, array $filter, bool $mitTitel = false): array
 {
     $q = $filter + [
         'singleEvents' => 'true',
         'maxResults' => '2500',
-        // Titel, Beschreibung, Ort und Teilnehmer werden gar nicht erst abgefragt
-        'fields' => 'items(id,status,start,end,transparency,extendedProperties),nextPageToken',
+        // Für die Buchungsseite werden Titel, Beschreibung, Ort und Teilnehmer gar nicht erst abgefragt.
+        // Nur das Dashboard des Salons liest Titel und Beschreibung der eigenen Buchungskalender.
+        'fields' => 'items(id,status,start,end,transparency,extendedProperties' . ($mitTitel ? ',summary,description' : '') . '),nextPageToken',
     ];
     $alle = [];
     do {
