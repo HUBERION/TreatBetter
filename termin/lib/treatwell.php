@@ -42,6 +42,15 @@ function treatwellLeistung(string $name): ?array
     return $id ? leistung($id) : null;
 }
 
+/* Dauer aus „20 minuten“, „1 stunde 25 minuten + 30 minuten processing“ usw. in Minuten. */
+function twDauer(string $s): int
+{
+    $min = 0;
+    preg_match_all('/(\d+)\s*(stunden?|std\.?|h\b|hours?|minuten?|min\.?|minutes?)/iu', $s, $m, PREG_SET_ORDER);
+    foreach ($m as $x) $min += preg_match('/^(st|h)/i', $x[2]) ? (int) $x[1] * 60 : (int) $x[1];
+    return $min;
+}
+
 /* Inhalt einer Treatwell-E-Mail auswerten. Liefert ['art' => neu|storno|aenderung|fremd, …]. */
 function treatwellLesen(string $betreff, string $text): array
 {
@@ -61,8 +70,13 @@ function treatwellLesen(string $betreff, string $text): array
         $vorher = mb_substr($flach, 0, $g);
         $t = mb_strrpos($vorher, 'Termin');
         if ($t !== false) {
-            preg_match_all('/([^()]+?)\s*\(\s*(\d+)\s*minuten?\s*\)/iu', mb_substr($vorher, $t + 6), $treffer, PREG_SET_ORDER);
-            foreach ($treffer as $x) $e['leistungen'][] = ['name' => trim($x[1]), 'min' => (int) $x[2]];
+            // z. B. „Herren - Trockenhaarschnitt (20 minuten )“ oder
+            // „Paket - Ansatzfarbe … (1 stunde 25 minuten + 30 minuten processing )“ (Einwirkzeit zählt mit)
+            preg_match_all('/([^()]+?)\s*\(([^()]*\d[^()]*)\)/u', mb_substr($vorher, $t + 6), $treffer, PREG_SET_ORDER);
+            foreach ($treffer as $x) {
+                $min = twDauer($x[2]);
+                if ($min > 0) $e['leistungen'][] = ['name' => trim($x[1]), 'min' => $min];
+            }
         }
     }
     if (preg_match('/Datum\/Zeit\s+(\d{1,2})\.?\s+([A-Za-zÄÖÜäöü]+)\s+(\d{4})\s+(?:at|um)\s+(\d{1,2}):(\d{2})/u', $flach, $m)) {
@@ -75,11 +89,12 @@ function treatwellLesen(string $betreff, string $text): array
         $e['personText'] = trim($m[1]);
         foreach (TEAM as $p) if (mb_strtolower($e['personText']) === mb_strtolower($p['name']) || str_starts_with(mb_strtolower($e['personText']), mb_strtolower($p['name']) . ' ')) $e['person'] = $p['id'];
     }
-    if (preg_match('/\bStatus\s+(.+?)\s+(?:In Connect|Kundenname)\b/u', $flach, $m)) {
+    if (preg_match('/\bStatus\s+(.+?)\s+(?:In Connect|Kundenname|Gastname)\b/u', $flach, $m)) {
         $s = mb_strtolower($m[1]);
         $e['bezahlt'] = str_contains($s, 'nicht') ? false : (str_contains($s, 'bezahlt') ? true : null);
     }
-    if (preg_match('/\bKundenname\s+(.+?)\s+(?:In Treatwell Connect|Gebucht:|Buchungsdetails)/u', $flach, $m)) {
+    // „Kundenname“ bei neuen Buchungen, „Gastname“ bei verschobenen
+    if (preg_match('/\b(?:Kundenname|Gastname)\s+(.+?)\s+(?:In Treatwell Connect|Gebucht:|Buchungsdetails)/u', $flach, $m)) {
         // Treatwell hängt „Neu“ an, wenn es für den Salon eine neue Kundin ist
         $e['name'] = trim(preg_replace('/\s+(Neu|Neukunde|Neukundin)$/iu', '', trim($m[1])));
     }
@@ -164,8 +179,12 @@ function twAnwenden(array $cfg, array $e, string $betreff, array &$z): string
     $bezahlt = $e['bezahlt'] === true ? 'Vorab bezahlt' : ($e['bezahlt'] === false ? 'Nicht bezahlt' : 'Bezahlstatus unbekannt');
 
     $vorhanden = twTerminFinden($cfg, $e['nr']);
-    if ($vorhanden || $e['art'] === 'aenderung') {
-        if (!$vorhanden) { twHinweis($z, "Treatwell-Änderung {$e['nr']}: ursprünglicher Termin nicht gefunden, bitte von Hand prüfen.", $betreff, $e['nr']); return 'Hinweis'; }
+    if (!$vorhanden && $e['art'] === 'aenderung') {
+        // Buchung von vor dem automatischen Abruf: mit dem neuen Datum eintragen, alten Eintrag von Hand prüfen lassen
+        twHinweis($z, "Treatwell-Buchung {$e['nr']} ({$e['name']}) wurde auf " . datumLang($e['beginn']) . ', ' . hhmm($e['beginn'])
+            . ' verschoben und neu eingetragen. Falls der alte Termin noch von Hand im Kalender steht, bitte löschen.', $betreff, $e['nr']);
+    }
+    if ($vorhanden) {
         // Bekannte Buchung: auf den Stand der E-Mail bringen (Zeit, Person)
         $t = $vorhanden['termin'];
         terminUmziehen($cfg, $vorhanden['person'], $e['person'], (string) $t['id']);

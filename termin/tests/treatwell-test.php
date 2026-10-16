@@ -53,6 +53,24 @@ foreach (['Text' => [$t1, $t2], 'HTML' => [mailText(alsMail($b1, $h1))['text'], 
     pruefe("$weg 2: Name", $e['name'], 'Erika Beispiel');
 }
 
+// Verschiebung (echte E-Mail „TERMIN VERSCHOBEN“, Paket mit Einwirkzeit, „Gastname“, ohne Kundenkontakt)
+$tv = file_get_contents(__DIR__ . '/treatwell/verschoben.txt');
+preg_match('/^Betreff:\s*(.+)$/m', $tv, $m);
+$bv = trim($m[1]);
+foreach (['Text' => $tv, 'HTML' => mailText(alsMail($bv, file_get_contents(__DIR__ . '/treatwell/verschoben.html')))['text']] as $weg => $x) {
+    $e = treatwellLesen($bv, $x);
+    pruefe("$weg verschoben: Art", $e['art'], 'aenderung');
+    pruefe("$weg verschoben: Bestellnummer", $e['nr'], 'T2192396359');
+    pruefe("$weg verschoben: Paket mit 1 Std. 25 Min. + 30 Min. Einwirkzeit", $e['leistungen'][0]['min'] ?? null, 115);
+    pruefe("$weg verschoben: Paketname", $e['leistungen'][0]['name'] ?? null, 'Paket - Ansatzfarbe, Waschen, Pflege, Schneiden & Föhnen');
+    pruefe("$weg verschoben: neuer Beginn", date('Y-m-d H:i', (int) $e['beginn']), '2026-09-12 08:00');
+    pruefe("$weg verschoben: Gastname ohne „Neu“", $e['name'], 'Clara Testfall-Muster');
+    pruefe("$weg verschoben: keine Salon-Adresse als Kunden-E-Mail", $e['mail'], '');
+    pruefe("$weg verschoben: nichts fehlt", $e['fehlt'], []);
+}
+pruefe('Dauer „20 minuten“', twDauer('20 minuten '), 20);
+pruefe('Dauer „1 stunde“', twDauer('1 stunde'), 60);
+
 pruefe('Leistung zuordnen', treatwellLeistung('Herren - Trockenhaarschnitt')['id'] ?? null, 'herren-trocken');
 pruefe('Leistung zuordnen (Treatwell-Schreibweise)', treatwellLeistung('Studenten  - Waschen, Schneiden & Föhnen')['id'] ?? null, 'stud-wsf');
 pruefe('Stornierung erkennen', array_intersect_key(treatwellLesen('Stornierte Treatwell Buchung (Unsere Ref. T2194729034)', 'Ihre Buchung wurde storniert.'), ['art' => 1, 'nr' => 1]), ['art' => 'storno', 'nr' => 'T2194729034']);
@@ -88,6 +106,17 @@ pruefe('… und als Hinweis gemeldet', str_contains(end($z['hinweise'])['text'] 
 // Unvollständige E-Mail: nichts raten
 $e = treatwellLesen($b2, str_replace('Datum/Zeit', 'Wann', $t2));
 pruefe('Unlesbares Datum: Hinweis statt Termin', twAnwenden($cfg, $e, $b2, $z), 'Hinweis');
+
+// Verschiebung einer bekannten Buchung: Termin wandert auf die neue Zeit
+$e = treatwellLesen('TERMIN VERSCHOBEN: Buchung über Treatwell (Unsere Ref. T2195121742)', str_replace(['9 Oktober 2026 at 13:35', 'Kundenname'], ['16 Oktober 2026 at 09:00', 'Gastname'], $t2));
+pruefe('Verschiebung bekannter Buchung', twAnwenden($cfg, $e, 'verschoben', $z), 'aktualisiert');
+pruefe('… neue Zeit', date('Y-m-d H:i', terminZeit(twTerminFinden($cfg, 'T2195121742')['termin'])[0]), '2026-10-16 09:00');
+
+// Verschiebung einer Buchung von vor dem Abruf: neu eintragen und Hinweis
+$vorher = count($z['hinweise']);
+pruefe('Verschiebung unbekannter Buchung wird eingetragen', twAnwenden($cfg, treatwellLesen($bv, $tv), $bv, $z), 'eingetragen');
+pruefe('… mit Hinweis, alten Termin zu prüfen', count($z['hinweise']) > $vorher && str_contains(end($z['hinweise'])['text'], 'verschoben'), true);
+pruefe('… Paketname als eigene Tätigkeit', twTerminFinden($cfg, 'T2192396359')['termin']['extendedProperties']['private']['taetigkeit'] ?? null, 'Paket - Ansatzfarbe, Waschen, Pflege, Schneiden & Föhnen');
 
 // Stornierung
 pruefe('Stornierung löscht den Termin', twAnwenden($cfg, treatwellLesen('Stornierte Treatwell Buchung (Unsere Ref. T2195121742)', ''), 'Storno', $z), 'storniert');
