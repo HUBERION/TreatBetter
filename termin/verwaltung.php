@@ -257,6 +257,90 @@ try {
         antwort(400, ['fehler' => 'Unbekannte Art']);
     }
 
+    /* Bestehenden Eintrag bearbeiten: Kundentermin (Name, Kontakt, Leistung, Dauer, Person, Zeit)
+       oder Blockzeit/Kalendereintrag (Bezeichnung, Notiz, Person, Zeit oder ganztägig). */
+    if ($a === 'aendern' && $methode === 'POST') {
+        $d = eingabe();
+        $von = personPruefen((string) ($d['von'] ?? ''));
+        $nach = personPruefen((string) ($d['person'] ?? $von['id']));
+        $t = terminHolen($cfg, $von['id'], (string) ($d['id'] ?? '')) ?? antwort(404, ['fehler' => 'Der Eintrag wurde nicht gefunden. Vielleicht wurde er schon geändert oder gelöscht.']);
+        $s = adminSicht($t, $von['id']);
+        $priv = $t['extendedProperties']['private'] ?? [];
+        $tag = (string) ($d['tag'] ?? '');
+
+        if (in_array($s['art'], ['online', 'telefon', 'treatwell'], true)) {
+            $eigene = ($d['leistung'] ?? '') === 'eigene';
+            $l = $eigene ? null : leistung((string) ($d['leistung'] ?? ''));
+            [$name, $mail, $tel, $f] = pruefeKunde($d, false);
+            $taetigkeit = trim(preg_replace('/\s+/u', ' ', (string) ($d['taetigkeit'] ?? '')));
+            if (!$eigene && !$l) $f['leistung'] = 'Bitte eine Leistung wählen.';
+            if ($eigene && (mb_strlen($taetigkeit) < 2 || mb_strlen($taetigkeit) > 60)) $f['taetigkeit'] = 'Bitte angeben, was gemacht wird.';
+            $dauer = isset($d['dauer']) && $d['dauer'] !== '' && $d['dauer'] !== null ? (int) $d['dauer'] : ($l['min'] ?? 0);
+            if ($dauer < 5 || $dauer > 600) $f['dauer'] = 'Bitte eine Dauer zwischen 5 und 600 Minuten angeben.';
+            if ($f) antwort(400, ['fehler' => 'Bitte die markierten Felder prüfen.', 'felder' => $f]);
+            $beginn = zeitpunkt($tag, (string) ($d['uhr'] ?? ''));
+            $ende = $beginn + $dauer * 60;
+            if (empty($d['trotzdem']) && ($k = konflikte($cfg, $nach['id'], $beginn, $ende, $s['id']))) antwort(409, ['konflikt' => $k, 'fehler' => 'Zu dieser Zeit ist schon etwas eingetragen.']);
+            $voll = $eigene ? $taetigkeit : leistungsname($l);
+            $zeitGeaendert = $beginn !== $s['beginn'] || $ende !== $s['ende'] || $nach['id'] !== $von['id'];
+            $folge = (int) ($priv['folge'] ?? 0) + ($zeitGeaendert ? 1 : 0);
+            // E-Mail an die Kundin nur auf Wunsch, nicht bei Treatwell (Treatwell informiert selbst)
+            $mailen = !empty($d['informieren']) && $mail !== '' && $s['art'] !== 'treatwell';
+            $token = $mailen ? neuerToken() : '';
+            $quelleText = ['online' => 'Online gebucht', 'telefon' => 'Telefonisch eingetragen', 'treatwell' => 'Über Treatwell gebucht'][$s['art']];
+            $neuPriv = array_merge($priv, [
+                'leistung' => $eigene ? 'eigene' : $l['id'], 'taetigkeit' => $eigene ? $taetigkeit : '',
+                'name' => $name, 'mail' => $mail, 'tel' => $tel, 'folge' => (string) $folge,
+                'tok' => $token !== '' ? stornoHash($token) : ($priv['tok'] ?? ''),
+            ]);
+            // Neuer Tag: Erinnerung noch einmal schicken
+            if (date('Y-m-d', $beginn) !== date('Y-m-d', $s['beginn'])) $neuPriv['erinnert'] = '';
+            terminUmziehen($cfg, $von['id'], $nach['id'], $s['id']);
+            terminAendern($cfg, $nach['id'], $s['id'], [
+                'summary' => $name . ' – ' . $voll . ($s['art'] === 'treatwell' ? ' (Treatwell)' : ''),
+                'description' => $quelleText . (!empty($priv['tw']) ? "\nBestellnr.: {$priv['tw']}" : '') . (!empty($priv['twbezahlt']) ? "\n{$priv['twbezahlt']}" : '')
+                    . "\nLeistung: $voll" . ($tel !== '' ? "\nTelefon: $tel" : '') . ($mail !== '' ? "\nE-Mail: $mail" : ''),
+                'start' => ['dateTime' => rfc3339($beginn), 'timeZone' => 'Europe/Vienna', 'date' => null],
+                'end' => ['dateTime' => rfc3339($ende), 'timeZone' => 'Europe/Vienna', 'date' => null],
+                'extendedProperties' => ['private' => $neuPriv],
+            ]);
+            if (!empty($priv['kunde'])) karteiBesuchSetzen($cfg, (string) $priv['kunde'], $s['id'], $nach['id'], $beginn, $voll, $eigene ? '' : $l['id'], $s['art']);
+            $gemailt = false;
+            if ($mailen) {
+                try {
+                    mailVerschoben($cfg, ['id' => $s['id'], 'beginn' => $beginn, 'ende' => $ende, 'leistung' => $voll, 'person' => $nach['name'],
+                        'name' => $name, 'mail' => $mail, 'folge' => $folge, 'storno_url' => $cfg['basis_url'] . '#storno=' . $token]);
+                    $gemailt = true;
+                } catch (Throwable $e) {
+                    protokoll($cfg, 'Mail fehlgeschlagen: ' . $e->getMessage());
+                }
+            }
+            antwort(200, ['ok' => true, 'gemailt' => $gemailt]);
+        }
+
+        // Blockzeit (Pause, Urlaub …) oder direkt im Google Kalender eingetragener Termin
+        $grund = trim((string) ($d['grund'] ?? ''));
+        if ($grund === '' || mb_strlen($grund) > 60) antwort(400, ['fehler' => 'Bitte angeben, was eingetragen ist (z. B. Urlaub).']);
+        $aenderung = ['summary' => $grund, 'description' => mb_substr(trim((string) ($d['notiz'] ?? '')), 0, 300)];
+        if (!empty($d['ganztags'])) {
+            $bisTag = (string) ($d['bisTag'] ?? '') ?: $tag;
+            try { $t1 = tag($tag); $t2 = tag($bisTag); } catch (InvalidArgumentException $e) { antwort(400, ['fehler' => 'Bitte ein gültiges Datum angeben.']); }
+            if ($t2 < $t1) antwort(400, ['fehler' => 'Das Ende liegt vor dem Beginn.']);
+            if ($t1->diff($t2)->days > 60) antwort(400, ['fehler' => 'Bitte höchstens 60 Tage auf einmal eintragen.']);
+            $aenderung['start'] = ['date' => $t1->format('Y-m-d'), 'dateTime' => null, 'timeZone' => null];
+            $aenderung['end'] = ['date' => $t2->modify('+1 day')->format('Y-m-d'), 'dateTime' => null, 'timeZone' => null];
+        } else {
+            $beginn = zeitpunkt($tag, (string) ($d['uhr'] ?? ''));
+            $ende = zeitpunkt($tag, (string) ($d['bis'] ?? ''));
+            if ($ende <= $beginn) antwort(400, ['fehler' => 'Das Ende muss nach dem Beginn liegen.']);
+            $aenderung['start'] = ['dateTime' => rfc3339($beginn), 'timeZone' => 'Europe/Vienna', 'date' => null];
+            $aenderung['end'] = ['dateTime' => rfc3339($ende), 'timeZone' => 'Europe/Vienna', 'date' => null];
+        }
+        terminUmziehen($cfg, $von['id'], $nach['id'], $s['id']);
+        terminAendern($cfg, $nach['id'], $s['id'], $aenderung);
+        antwort(200, ['ok' => true]);
+    }
+
     if ($a === 'verschieben' && $methode === 'POST') {
         $d = eingabe();
         $p = personPruefen((string) ($d['person'] ?? ''));

@@ -112,7 +112,7 @@ Für Andrea und Pamela, am Salon-Handy und am Salon-PC: **andreazechmeister.at/t
 - **Woche:** sieben Tage auf einen Blick.
 - **Eintragen:** Kundentermin (telefonisch) mit Leistung aus der Liste oder „Andere Tätigkeit“ mit eigener Bezeichnung; die Dauer kommt aus der Leistung oder wird selbst eingetragen (5–600 Minuten), oder Zeit blockieren (Pause, Arzttermin, Frei, Urlaub, Krank, Sonstiges, auch ganztägig über mehrere Tage, auch für beide). Bei Überschneidungen kommt eine Warnung mit „Trotzdem eintragen“.
 - **Telefonische Termine** mit E-Mail-Adresse bekommen auf Wunsch Bestätigung, Absage-Link und Erinnerung wie Online-Buchungen.
-- **Verschieben** (auch zur anderen Person), dabei lässt sich auch die Dauer ändern, und **Absagen**, jeweils auf Wunsch mit E-Mail an die Kundin. Beim Verschieben gibt es einen neuen Absage-Link, der alte gilt nicht mehr.
+- **Bearbeiten:** Kundentermine (Name, Telefon, E-Mail, Leistung bzw. eigene Tätigkeit, Dauer, Person, Datum, Uhrzeit; auf Wunsch E-Mail „Dein Termin wurde geändert“ mit neuem Absage-Link) und Blockzeiten bzw. Einträge aus dem Google Kalender (Bezeichnung, Notiz, Person, ganztägig oder mit Uhrzeit, von–bis). Und **Absagen**, jeweils auf Wunsch mit E-Mail an die Kundin. Beim Verschieben gibt es einen neuen Absage-Link, der alte gilt nicht mehr.
 - **Kundensuche** nach Name, Telefon oder E-Mail (letzte 12 Monate und alle kommenden Termine).
 - **Einstellungen:** Online-Buchung je Person pausieren (`daten/einstellungen.json`). Die Kundenseite blendet pausierte Personen sofort aus.
 

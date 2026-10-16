@@ -121,7 +121,7 @@ function mailVerschoben(array $cfg, array $b): void
             : '')
         . "Passt dir der neue Termin nicht? Ruf uns an: " . telefonText() . "\n\n"
         . "Liebe Grüße\n" . SALON['name'] . "\n";
-    mailSenden($cfg, $b['mail'], 'Dein Termin wurde verschoben: ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
+    mailSenden($cfg, $b['mail'], 'Dein Termin wurde geändert: ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
         icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], false, $b['mail'], (int) ($b['folge'] ?? 0)));
 }
 

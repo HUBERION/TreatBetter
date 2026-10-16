@@ -474,6 +474,7 @@
     let html = '';
     if (M.typ === 'neu') {
       const f = M.werte;
+      const bearbeiten = !!M.edit; // gleicher Dialog zum Bearbeiten eines bestehenden Eintrags
       const reiter = `<div class="seg" role="group" aria-label="Was eintragen?">
         <button type="button" data-act="neu-art" data-arg="termin" aria-pressed="${f.art === 'termin'}">Kundentermin</button>
         <button type="button" data-act="neu-art" data-arg="block" aria-pressed="${f.art === 'block'}">Zeit blockieren</button></div>`;
@@ -487,11 +488,11 @@
              ${!eigene ? `<div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-vorgabe">Vorgabe ${vorgabe.min} Min. verwenden</button></div>` : '<div></div>'}`
           : `<div class="field"><span class="sublabel">Dauer</span><span style="min-height:48px;display:flex;align-items:center">${vorgabe ? vorgabe.min : ''} Min. (Vorgabe)</span></div>
              <div class="field" style="justify-content:flex-end"><button type="button" class="btn-outline" data-act="dauer-eigen">Dauer selbst eintragen</button></div>`;
-        felder = `<div class="field"><span class="sublabel">Woher kommt der Termin?</span>
+        felder = `${bearbeiten ? `<p class="muted small"><span class="art art-${M.edit.art}">${ART_TEXT[M.edit.art]}</span> ${M.edit.art === 'online' ? 'Online gebucht' : M.edit.art === 'treatwell' ? 'Über Treatwell gebucht – Änderungen bitte auch in Treatwell machen' : 'Telefonisch eingetragen'}</p>` : `<div class="field"><span class="sublabel">Woher kommt der Termin?</span>
           <div class="seg" role="group" aria-label="Woher kommt der Termin?">
             <button type="button" data-act="quelle" data-arg="telefon" aria-pressed="${f.quelle !== 'treatwell'}">Telefon / vor Ort</button>
             <button type="button" data-act="quelle" data-arg="treatwell" aria-pressed="${f.quelle === 'treatwell'}">Treatwell</button>
-          </div></div>
+          </div></div>`}
         <div class="grid2">
           ${auswahlPerson('person', f.person)}
           <div class="field"><label for="f-leistung">Leistung</label><select id="f-leistung" name="leistung" data-change="leistung">${D.leistungen.map((l) => `<option value="${l.id}"${f.leistung === l.id ? ' selected' : ''}>${esc(l.voll)} (${l.min} Min.)</option>`).join('')}
@@ -502,7 +503,7 @@
           ${dauerFeld}
           <p class="muted small full" id="ende-hinweis" aria-live="polite">${endeText(f.uhr, eigene || f.dauerEigen ? f.dauer || (vorgabe ? vorgabe.min : '') : vorgabe && vorgabe.min)}</p>
           <div class="full">
-            ${f.kunde
+            ${bearbeiten ? feld('name', 'Name der Kundin bzw. des Kunden', 'text', f.name, ' autocomplete="off" maxlength="80" required') : f.kunde
               ? `<div class="note" style="align-items:center">${ic('users', 20)}<div style="flex:1"><b>${esc(f.kunde.name)} · Kundenkarte</b>
                   <span>${f.kunde.letzter ? 'Zuletzt: ' + besuchKurz(f.kunde.letzter) : 'Noch kein Besuch eingetragen'}</span></div>
                   ${f.kunde.letzter && f.kunde.letzter.leistungId ? `<button type="button" class="mini" data-act="gleiche-leistung">Gleiche Leistung</button>` : ''}
@@ -515,14 +516,15 @@
           ${feld('tel', 'Telefon (freiwillig)', 'tel', f.tel, ' autocomplete="off" maxlength="25"')}
           ${feld('mail', 'E-Mail (freiwillig)', 'email', f.mail, ' autocomplete="off" maxlength="120"')}
         </div>
-        ${f.quelle === 'treatwell'
+        ${bearbeiten ? (M.edit.art === 'treatwell' ? '' : `<label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Kundin bzw. Kunde per E-Mail über die Änderung informieren (nur wenn E-Mail angegeben)</label>`) : f.quelle === 'treatwell'
           ? '<p class="muted small">Treatwell schickt der Kundin Bestätigung und Erinnerung selbst. Von hier geht keine E-Mail raus.</p>'
           : `<label class="check"><input type="checkbox" name="mailSenden"${f.mailSenden ? ' checked' : ''}> Bestätigung per E-Mail schicken (nur wenn E-Mail angegeben; dann auch Erinnerung am Vortag)</label>`}
-        ${f.kunde ? '' : `<label class="check"><input type="checkbox" name="kartei"${f.kartei ? ' checked' : ''}> In der Kundenkartei speichern (Stammkundin bzw. Stammkunde)</label>`}`;
+        ${f.kunde || bearbeiten ? '' : `<label class="check"><input type="checkbox" name="kartei"${f.kartei ? ' checked' : ''}> In der Kundenkartei speichern (Stammkundin bzw. Stammkunde)</label>`}`;
       } else {
         const gruende = ['Pause', 'Arzttermin', 'Frei', 'Urlaub', 'Krank', 'Sonstiges'];
+        if (f.grund && !gruende.includes(f.grund)) gruende.unshift(f.grund); // z. B. Titel aus dem Google Kalender
         felder = `<div class="grid2">
-          ${auswahlPerson('person', f.person, true)}
+          ${auswahlPerson('person', f.person, !bearbeiten)}
           <div class="field"><label for="f-grund">Was</label><select id="f-grund" name="grund">${gruende.map((g) => `<option${f.grund === g ? ' selected' : ''}>${g}</option>`).join('')}</select></div>
           <div class="full"><label class="check"><input type="checkbox" name="ganztags" data-change="ganztags"${f.ganztags ? ' checked' : ''}> Ganztägig (z. B. Urlaub, freier Tag)</label></div>
           ${f.ganztags
@@ -531,10 +533,10 @@
           <div class="field full"><label for="f-notiz">Notiz (freiwillig)</label><textarea id="f-notiz" name="notiz" maxlength="300">${esc(f.notiz || '')}</textarea></div>
         </div>`;
       }
-      html = `${kopfDialog('Eintragen')}${reiter}
+      html = `${kopfDialog(bearbeiten ? 'Bearbeiten' : 'Eintragen')}${bearbeiten ? '' : reiter}
         <form class="stack" data-submit="neu" novalidate>${felder}${konfliktHtml()}${fehlerHtml()}
-          <div class="knoepfe">${M.konflikt ? `<button type="button" class="btn-outline" data-act="trotzdem">Trotzdem eintragen</button>` : ''}
-          <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird eingetragen …' : 'Eintragen'}</button></div>
+          <div class="knoepfe">${M.konflikt ? `<button type="button" class="btn-outline" data-act="trotzdem">${bearbeiten ? 'Trotzdem speichern' : 'Trotzdem eintragen'}</button>` : ''}
+          <button type="submit" class="btn-primary"${M.sendet ? ' disabled aria-busy="true"' : ''}>${M.sendet ? 'Wird gespeichert …' : bearbeiten ? 'Speichern' : 'Eintragen'}</button></div>
         </form>`;
     } else if (M.typ === 'detail') {
       const t = termin(M.arg);
@@ -565,7 +567,7 @@
         ${M.fehler ? `<p class="err" role="alert">${esc(M.fehler)}</p>` : ''}
         <div class="knoepfe">
           ${t.tel ? `<a class="btn-outline" href="tel:${esc(t.tel.replace(/[^\d+]/g, ''))}">${ic('phone', 18)}Anrufen</a>` : ''}
-          ${!t.ganztags ? `<button type="button" class="btn-outline" data-act="verschieben" data-arg="${esc(M.arg)}">Verschieben</button>` : ''}
+          <button type="button" class="btn-outline" data-act="bearbeiten" data-arg="${esc(M.arg)}">Bearbeiten</button>
           ${kunde && t.kunde ? `<a class="btn-outline" href="#/kunde/${esc(t.kunde)}" data-act="schliessen-weiter">${ic('users', 18)}Kundenkarte</a>` : ''}
           ${kunde && !t.kunde && !t.anonym ? `<button type="button" class="btn-outline" data-act="als-stammkunde" data-arg="${esc(M.arg)}">${ic('users', 18)}Als Stammkunde speichern</button>` : ''}
           <button type="button" class="btn-danger" data-act="absagen" data-arg="${esc(M.arg)}">${kunde ? 'Termin absagen' : 'Eintrag löschen'}</button>
@@ -687,6 +689,27 @@
     M.felder = {}; M.fehler = ''; M.sendet = true;
     if (!trotzdem) M.konflikt = null;
     dialogZeichnen();
+    if (M.edit) {
+      // Bestehenden Eintrag ändern
+      try {
+        const body = f.art === 'termin'
+          ? { von: M.edit.person, id: M.edit.id, person: f.person, tag: f.tag, uhr: f.uhr, leistung: f.leistung, taetigkeit: f.taetigkeit,
+            dauer: f.leistung === 'eigene' || f.dauerEigen ? f.dauer : '', name: f.name, tel: f.tel, mail: f.mail,
+            informieren: !!f.mailSenden && M.edit.art !== 'treatwell', trotzdem: !!trotzdem }
+          : { von: M.edit.person, id: M.edit.id, person: f.person, tag: f.tag, bisTag: f.bisTag, ganztags: !!f.ganztags, uhr: f.uhr, bis: f.bis, grund: f.grund, notiz: f.notiz };
+        const r = await api('aendern', {}, body);
+        dialogSchliessen();
+        toast('Gespeichert' + (r.gemailt ? ', E-Mail an die Kundin verschickt.' : '.'));
+        laden(true);
+      } catch (e) {
+        M.sendet = false;
+        M.fehler = e.message;
+        M.felder = (e.data && e.data.felder) || {};
+        M.konflikt = e.status === 409 && e.data && e.data.konflikt ? e.data.konflikt : null;
+        dialogZeichnen();
+      }
+      return;
+    }
     const personen = f.art === 'block' && f.person === 'beide' ? D.team.map((p) => p.id) : [f.person];
     try {
       let gemailt = false;
@@ -762,6 +785,23 @@
     'dauer-eigen': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); const l = D.leistungen.find((x) => x.id === M.werte.leistung); M.werte.dauerEigen = true; M.werte.dauer = l ? l.min : ''; dialogZeichnen(); const el = dlg.querySelector('#f-dauer'); if (el) { el.focus(); el.select(); } },
     'hinweis-erledigt': async (id) => {
       try { const r = await api('hinweis-erledigt', {}, { id }); D.treatwell = r.treatwell; render(); } catch (e) { toast(e.message); }
+    },
+    bearbeiten: (arg) => {
+      const t = termin(arg);
+      if (!t) return;
+      const edit = { person: t.person, id: t.id, art: t.art };
+      const minuten = Math.round((t.ende - t.beginn) / 60);
+      if (istKunde(t)) {
+        const l = D.leistungen.find((x) => x.id === t.leistungId);
+        neuDialog({ art: 'termin', person: t.person, tag: t.tag, uhr: t.uhr, leistung: l ? l.id : 'eigene', taetigkeit: l ? '' : t.leistung,
+          dauerEigen: !l || l.min !== minuten, dauer: minuten, name: t.name, tel: t.tel, mail: t.mail, mailSenden: false, kartei: false });
+      } else {
+        // Ganztägig: Google speichert das Ende als Folgetag, angezeigt wird der letzte Tag
+        const bisTag = t.ganztags ? keyOf(new Date((t.ende - 1) * 1000)) : t.tag;
+        neuDialog({ art: 'block', person: t.person, tag: t.tag, bisTag, ganztags: t.ganztags, uhr: t.uhr, bis: t.bis, grund: t.titel || 'Sonstiges', notiz: t.notiz });
+      }
+      M.edit = edit;
+      dialogZeichnen();
     },
     quelle: (q) => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.quelle = q; dialogZeichnen(); },
     'dauer-vorgabe': () => { Object.assign(M.werte, formWerte(dlg.querySelector('form'))); M.werte.dauerEigen = false; M.werte.dauer = ''; dialogZeichnen(); },
