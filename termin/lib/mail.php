@@ -86,9 +86,9 @@ function mailBestaetigung(array $cfg, array $b): void
         . "  Wo:     " . SALON['name'] . ', ' . SALON['strasse'] . ', ' . SALON['ort'] . "\n\n"
         . "Bezahlt wird im Salon, bar oder mit Karte.\n"
         . "Parkplätze gibt es im Innenhof, die Einfahrt ist über die Rosentaler Straße.\n\n"
-        . "Termin absagen (kostenlos bis " . datumLang($frist) . ', ' . hhmm($frist) . " Uhr):\n"
+        . "Termin verschieben oder absagen (kostenlos bis " . datumLang($frist) . ', ' . hhmm($frist) . " Uhr):\n"
         . "{$b['storno_url']}\n\n"
-        . "Danach bitte telefonisch absagen: " . telefonText() . "\n\n"
+        . "Danach bitte telefonisch melden: " . telefonText() . "\n\n"
         . "Bis bald!\n" . SALON['name'] . "\n";
     mailSenden($cfg, $b['mail'], 'Dein Termin am ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
         icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], false, $b['mail']));
@@ -106,23 +106,36 @@ function mailBestaetigung(array $cfg, array $b): void
     }
 }
 
-/* Termin wurde vom Salon verschoben. */
-function mailVerschoben(array $cfg, array $b): void
+/* Termin wurde verschoben: vom Salon (Dashboard) oder von der Kundin selbst über den Link ($vonKundin). */
+function mailVerschoben(array $cfg, array $b, bool $vonKundin = false): void
 {
     $text = "Hallo {$b['name']},\n\n"
-        . "dein Termin hat sich geändert. So sieht er jetzt aus:\n\n"
+        . ($vonKundin ? "du hast deinen Termin verschoben. Dein neuer Termin:\n\n" : "dein Termin hat sich geändert. So sieht er jetzt aus:\n\n")
         . "  Wann:   " . datumLang($b['beginn']) . ', ' . hhmm($b['beginn']) . " Uhr\n"
         . "  Was:    {$b['leistung']}\n"
         . "  Bei:    {$b['person']}\n"
         . "  Wo:     " . SALON['name'] . ', ' . SALON['strasse'] . ', ' . SALON['ort'] . "\n\n"
         . "Im Anhang ist der neue Kalendereintrag. Viele Kalender-Apps ändern den gespeicherten Termin damit von selbst.\n\n"
         . (!empty($b['storno_url'])
-            ? "Termin absagen (kostenlos bis " . datumLang($b['beginn'] - REGELN['storno'] * 3600) . ', ' . hhmm($b['beginn'] - REGELN['storno'] * 3600) . " Uhr):\n{$b['storno_url']}\n\n"
+            ? "Termin verschieben oder absagen (kostenlos bis " . datumLang($b['beginn'] - REGELN['storno'] * 3600) . ', ' . hhmm($b['beginn'] - REGELN['storno'] * 3600) . " Uhr):\n{$b['storno_url']}\n\n"
             : '')
-        . "Passt dir der neue Termin nicht? Ruf uns an: " . telefonText() . "\n\n"
+        . ($vonKundin ? "Fragen? Ruf uns an: " : "Passt dir der neue Termin nicht? Ruf uns an: ") . telefonText() . "\n\n"
         . "Liebe Grüße\n" . SALON['name'] . "\n";
-    mailSenden($cfg, $b['mail'], 'Dein Termin wurde geändert: ' . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
-        icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], false, $b['mail'], (int) ($b['folge'] ?? 0)));
+    if (($b['mail'] ?? '') !== '') {
+        mailSenden($cfg, $b['mail'], ($vonKundin ? 'Termin verschoben: ' : 'Dein Termin wurde geändert: ') . datumLang($b['beginn']) . ' um ' . hhmm($b['beginn']) . ' Uhr', $text,
+            icsDatei($b['id'], $b['beginn'], $b['ende'], $b['leistung'] . ' – ' . SALON['name'], false, $b['mail'], (int) ($b['folge'] ?? 0)));
+    }
+
+    if ($vonKundin && !empty($cfg['mail_an_salon'])) {
+        mailSenden($cfg, SALON['mail'], 'Online-Buchung verschoben: ' . datumLang($b['beginn']) . ' ' . hhmm($b['beginn']) . ' ' . $b['person'],
+            "Eine Online-Buchung wurde von der Kundin bzw. vom Kunden verschoben.\n\n"
+            . "Neu:      " . datumLang($b['beginn']) . ', ' . hhmm($b['beginn']) . '–' . hhmm($b['ende']) . " Uhr bei {$b['person']}\n"
+            . "Bisher:   " . ($b['alt'] ?? '') . "\n"
+            . "Leistung: {$b['leistung']}\n"
+            . "Name:     {$b['name']}\n"
+            . "Telefon:  " . ($b['tel'] ?? '') . "\n\n"
+            . "Der Kalender ist schon aktualisiert, die alte Zeit ist wieder frei.\n");
+    }
 }
 
 function mailErinnerung(array $cfg, array $b): void

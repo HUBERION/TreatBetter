@@ -7,7 +7,7 @@ Die Buchungsseite für echte Termine. Sie läuft auf dem IONOS-Webhosting des Sa
 ```
 termin/
 ├── index.html, app.js, style.css   ← Kundenseite (Vanilla JS, kein Build), Aussehen aus docs/
-├── api.php                         ← Schnittstelle: stamm, woche, buchen, termin, storno
+├── api.php                         ← Schnittstelle: stamm, woche, buchen, termin, storno, verschieben
 ├── verwaltung.html, verwaltung.js   ← Dashboard für den Salon (Login mit Salon-Passwort)
 ├── verwaltung.php                  ← Schnittstelle des Dashboards
 ├── aufgaben.php                    ← täglicher Cronjob: Erinnerungen, alte Kundendaten entfernen
@@ -35,7 +35,7 @@ Es gibt **keine Datenbank**. Jede Buchung ist ein Termin im Kalender „Buchunge
 | Puffer nach jedem belegten Termin | 5 Min. |
 | Frühestens buchbar | 4 Std. ab jetzt |
 | Spätestens buchbar | 3 Monate im Voraus |
-| Kostenlos absagen | bis 24 Std. vorher, danach nur telefonisch |
+| Kostenlos verschieben oder absagen | bis 24 Std. vorher über den Link in der Bestätigung, danach nur telefonisch |
 | Andrea | Mo–Fr zu den Öffnungszeiten |
 | Pamela | Mo–Fr, Termin muss bis 14:00 fertig sein |
 
@@ -86,6 +86,7 @@ Für die Seite eine Konfiguration mit `'modus' => 'demo'` anlegen, `TREATBETTER_
 
 - Titel und Inhalte fremder Termine werden nicht verwendet: Für die Berechnung zählen nur Beginn, Ende und „Verfügbar/Beschäftigt“.
 - Storno-Link: zufälliger Schlüssel im Teil nach `#`, der nicht in Server-Protokollen landet. Im Kalender steht nur ein SHA-256-Prüfwert.
+- **Selbst verschieben:** Über denselben Link kann die Kundin bis zur Storno-Frist einen neuen Tag, eine neue Uhrzeit und eine andere Person wählen (gleiche Leistung und Dauer, nur freie Zeiten; der eigene Termin zählt dabei nicht als belegt). Der Termin wird in einem Schritt umgelegt, der Link bleibt gültig, `folge` wird hochgezählt (neue Kalender-Datei), die Erinnerung zurückgesetzt. Mail an die Kundin und Info-Mail an den Salon.
 - Gleichzeitige Buchungen werden mit einer Dateisperre nacheinander geprüft, keine Doppelbuchung.
 - Missbrauchsbremse: höchstens 5 Buchungen und 30 Storno-Aufrufe je Stunde und IP-Adresse (IP nur gehasht mit Tagessalz, nach einem Tag gelöscht), dazu ein unsichtbares Feld gegen Spam-Programme.
 - Die Datenschutzerklärung der Homepage hat einen Abschnitt „Online-Terminbuchung“ (Daten, Google Kalender, Löschung nach 12 Monaten). Erst beim Livegang hochladen.

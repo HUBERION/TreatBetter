@@ -100,6 +100,18 @@
   function viewTermin() {
     const l = leistung(U.leistung);
     if (!l) { location.replace('#/'); return ''; }
+    return `${backHead('#/', 'Termin wählen', 'Zurück zu den Leistungen')}
+<div class="pad">
+  <div class="sumcard">
+    <div><b>${esc(l.voll)}</b><span class="muted">Bezahlung im Salon</span></div>
+    <div style="align-items:flex-end"><a href="#/">ändern</a></div>
+  </div>
+</div>
+${auswahl()}`;
+  }
+
+  /* Person, Woche und freie Uhrzeiten (beim Buchen und beim Verschieben gleich) */
+  function auswahl() {
     const people = [{ id: 'any', name: 'Beliebig' }].concat(D.team);
     const staffHtml = people.map((p) => {
       const av = p.id === 'any' ? `<span class="avatar">${ic('users', 22)}</span>` : `<span class="avatar">${esc(p.name[0])}</span>`;
@@ -145,14 +157,7 @@
     } else {
       slotsHtml = '<div class="empty" aria-live="polite"><span>Freie Zeiten werden geladen …</span></div>';
     }
-    return `${backHead('#/', 'Termin wählen', 'Zurück zu den Leistungen')}
-<div class="pad">
-  <div class="sumcard">
-    <div><b>${esc(l.voll)}</b><span class="muted">Bezahlung im Salon</span></div>
-    <div style="align-items:flex-end"><a href="#/">ändern</a></div>
-  </div>
-</div>
-<div class="pad">
+    return `<div class="pad">
   <h2 class="label">Bei wem?</h2>
   <div class="staff-grid" style="grid-template-columns:repeat(${people.length},minmax(0,1fr))">${staffHtml}</div>
 </div>
@@ -203,7 +208,7 @@
   </section>
   <div>
     <label class="consent"><input type="checkbox" name="agb" aria-labelledby="t-agb"${F.agb ? ' checked' : ''}${E.agb ? ' aria-invalid="true" aria-describedby="e-agb"' : ''}>
-      <span id="t-agb">Ich buche verbindlich. Kostenlos absagen kann ich bis ${D.storno} Stunden vor dem Termin über den Link in der Bestätigungs-E-Mail, danach nur telefonisch. Die <a href="../datenschutz.html" target="_blank" rel="noopener">Datenschutzerklärung</a> habe ich gelesen.</span></label>
+      <span id="t-agb">Ich buche verbindlich. Kostenlos verschieben oder absagen kann ich bis ${D.storno} Stunden vor dem Termin über den Link in der Bestätigungs-E-Mail, danach nur telefonisch. Die <a href="../datenschutz.html" target="_blank" rel="noopener">Datenschutzerklärung</a> habe ich gelesen.</span></label>
     ${E.agb ? `<span class="err" id="e-agb">${esc(E.agb)}</span>` : ''}
   </div>
   ${U.fehler ? `<p class="err" role="alert">${esc(U.fehler)}</p>` : ''}
@@ -231,7 +236,7 @@
 <div class="done done-ok">
   <span class="done-icon">${ic('check', 36, 2.2)}</span>
   <h1>Termin gebucht!</h1>
-  <p>Wir haben dir eine Bestätigung an <b>${esc(t.mail)}</b> geschickt. Darin findest du auch den Link, falls du absagen musst.</p>
+  <p>Wir haben dir eine Bestätigung an <b>${esc(t.mail)}</b> geschickt. Darin findest du auch den Link, falls du den Termin verschieben oder absagen musst.</p>
 </div>
 ${terminDetails(t)}
 <div class="after">
@@ -257,15 +262,55 @@ ${terminDetails(t)}
     }
     if (!S.termin) return `${head()}<div class="done" aria-live="polite"><p>Termin wird geladen …</p></div>`;
     const t = S.termin;
+    if (S.modus === 'verschieben') {
+      return `<header class="topbar back">
+  <button type="button" class="icon-btn" data-act="verschieben-ende" aria-label="Zurück zu deinem Termin">${ic('back', 22, 2)}</button>
+  <h1 class="topbar-title">Neuen Termin wählen</h1>
+</header>
+<div class="pad">
+  <div class="sumcard">
+    <div><b>${esc(t.leistung)}</b><span class="muted">Bisher: ${esc(shortDate(fromKey(t.tag)))}, ${esc(t.uhr)} Uhr bei ${esc(t.person)}</span></div>
+  </div>
+</div>
+${auswahl()}`;
+    }
+    if (S.modus === 'pruefen' && S.neu) {
+      const n = S.neu;
+      const wer = U.person !== 'any' ? personName(U.person)
+        : n.wer.includes(t.personId) ? t.person : n.wer.length === 1 ? personName(n.wer[0]) : 'Beliebig';
+      return `<header class="topbar back">
+  <button type="button" class="icon-btn" data-act="verschieben-zurueck" aria-label="Andere Uhrzeit wählen">${ic('back', 22, 2)}</button>
+  <h1 class="topbar-title">Termin verschieben</h1>
+</header>
+<div class="pad stack">
+  <dl class="card details" style="margin:0">
+    <dt>Bisher</dt><dd><s>${esc(longDate(fromKey(t.tag)))}, ${esc(t.uhr)} Uhr</s><br><span class="muted">bei ${esc(t.person)}</span></dd>
+    <dt>Neu</dt><dd><b>${esc(longDate(fromKey(n.tag)))}, ${esc(n.uhr)} Uhr</b><br>bei ${esc(wer)}</dd>
+    <dt>Was</dt><dd>${esc(t.leistung)}</dd>
+  </dl>
+  <p class="muted small">Dein bisheriger Termin wird dabei freigegeben. Du bekommst eine E-Mail mit dem neuen Termin.</p>
+  ${S.meldung ? `<p class="err" role="alert">${esc(S.meldung)}</p>` : ''}
+  <button type="button" class="btn-primary wide" data-act="verschieben-ok"${S.sendet ? ' disabled aria-busy="true"' : ''}>${S.sendet ? 'Wird verschoben …' : 'Jetzt verschieben'}</button>
+  <button type="button" class="btn-soft" data-act="verschieben-zurueck">Andere Uhrzeit wählen</button>
+</div>`;
+    }
     const aktion = t.vorbei ? '<p class="muted center">Dieser Termin liegt in der Vergangenheit.</p>'
       : t.stornierbar
-        ? `<button type="button" class="btn-primary wide" data-act="absagen"${S.sendet ? ' disabled aria-busy="true"' : ''}>${S.sendet ? 'Wird abgesagt …' : 'Termin kostenlos absagen'}</button>
-           <p class="muted center small">Kostenlos möglich bis ${esc(t.frist)}.</p>`
-        : `<p class="muted center">Online absagen ist nicht mehr möglich (nur bis ${esc(D.storno)} Stunden vorher). Bitte ruf uns an: ${telLinks()}</p>`;
+        ? `<button type="button" class="btn-primary wide" data-act="verschieben-start"${S.sendet ? ' disabled' : ''}>Termin verschieben</button>
+           <button type="button" class="btn-soft" data-act="absagen"${S.sendet ? ' disabled aria-busy="true"' : ''}>${S.sendet ? 'Wird abgesagt …' : 'Termin kostenlos absagen'}</button>
+           <p class="muted center small">Verschieben und absagen kostenlos bis ${esc(t.frist)}.</p>`
+        : `<p class="muted center">Online verschieben oder absagen ist nicht mehr möglich (nur bis ${esc(D.storno)} Stunden vorher). Bitte ruf uns an: ${telLinks()}</p>`;
+    const kopf = S.verschoben
+      ? `<div class="done done-ok">
+  <span class="done-icon">${ic('check', 36, 2.2)}</span>
+  <h1>Termin verschoben!</h1>
+  <p>Dein neuer Termin steht unten. Du bekommst noch eine Bestätigung per E-Mail mit dem neuen Kalendereintrag.</p>
+</div>`
+      : '<div class="done"><h1>Dein Termin</h1></div>';
     return `${head()}
-<div class="done"><h1>Dein Termin</h1></div>
+${kopf}
 ${terminDetails(t)}
-<div class="after">${aktion}${S.meldung ? `<p class="err" role="alert">${esc(S.meldung)}</p>` : ''}</div>`;
+<div class="after">${aktion}${S.meldung ? `<p class="err" role="alert">${esc(S.meldung)}</p>` : ''}${S.verschoben ? '<a class="btn-soft" href="../">Zur Homepage</a>' : ''}</div>`;
   }
 
   /* ---------- Router ---------- */
@@ -281,7 +326,7 @@ ${terminDetails(t)}
     if (r.indexOf('storno=') === 0) {
       inner = viewStorno();
       r = 'storno';
-      document.title = 'Termin absagen – Friseur Andrea Zechmeister';
+      document.title = 'Dein Termin – Friseur Andrea Zechmeister';
     } else {
       if (!ROUTES[r]) r = '';
       inner = ROUTES[r]();
@@ -325,19 +370,20 @@ ${terminDetails(t)}
     rerender();
     const start = keyOf(addDays(fromKey(D.heute), U.woche * 7));
     try {
-      const r = await api('woche', { leistung: U.leistung, person: U.person, start });
+      const r = await api('woche', imVerschieben() ? { t: U.storno.token, person: U.person, start } : { leistung: U.leistung, person: U.person, start });
       if (nr !== ladeNr) return;
       U.tage = r.tage;
     } catch (e) {
       if (nr !== ladeNr) return;
       U.fehler = e.message;
     }
-    if (route() === 'termin') rerender();
+    if (route() === 'termin' || imVerschieben()) rerender();
   }
+  const imVerschieben = () => !!(U.storno && U.storno.modus === 'verschieben' && route().indexOf('storno=') === 0);
 
   async function stornoLaden() {
     const token = route().slice('storno='.length);
-    U.storno = { token, termin: null, fehler: '', fertig: false, sendet: false, meldung: '' };
+    U.storno = { token, termin: null, fehler: '', fertig: false, sendet: false, meldung: '', modus: null, neu: null, verschoben: false };
     render();
     try {
       U.storno.termin = (await api('termin', { t: token })).termin;
@@ -394,9 +440,41 @@ ${terminDetails(t)}
       const t = U.tage.find((x) => x.tag === U.tag);
       const z = t && t.zeiten.find((x) => String(x.ts) === ts);
       if (!z) return;
+      if (imVerschieben()) {
+        U.storno.neu = { ts: z.ts, uhr: z.uhr, wer: z.wer, tag: t.tag };
+        U.storno.modus = 'pruefen'; U.storno.meldung = '';
+        render(); window.scrollTo(0, 0);
+        return;
+      }
       U.zeit = { ts: z.ts, uhr: z.uhr, wer: z.wer, tag: t.tag };
       U.felder = {}; U.fehler = '';
       go('#/buchen');
+    },
+    'verschieben-start': () => {
+      const S = U.storno;
+      S.modus = 'verschieben'; S.meldung = ''; S.verschoben = false;
+      // Mit der bisherigen Person beginnen (falls sie online buchbar ist), in der Woche des bisherigen Termins
+      U.person = D.team.some((p) => p.id === S.termin.personId) ? S.termin.personId : 'any';
+      const tage = Math.round((fromKey(S.termin.tag) - fromKey(D.heute)) / 86400000);
+      U.woche = Math.max(0, Math.floor(tage / 7));
+      U.tag = S.termin.tag;
+      wocheLaden(); window.scrollTo(0, 0);
+    },
+    'verschieben-ende': () => { U.storno.modus = null; render(); window.scrollTo(0, 0); },
+    'verschieben-zurueck': () => { U.storno.modus = 'verschieben'; U.storno.meldung = ''; render(); window.scrollTo(0, 0); },
+    'verschieben-ok': async () => {
+      const S = U.storno;
+      S.sendet = true; S.meldung = '';
+      render();
+      try {
+        const r = await api('verschieben', {}, { t: S.token, ts: S.neu.ts, person: U.person });
+        S.termin = r.termin; S.modus = null; S.neu = null; S.verschoben = true;
+      } catch (e) {
+        S.meldung = e.message;
+        if (e.status === 409 && /vergeben/.test(e.message)) { S.modus = 'verschieben'; toast(e.message); S.sendet = false; wocheLaden(); return; }
+      }
+      S.sendet = false;
+      render(); window.scrollTo(0, 0);
     },
     absagen: async () => {
       if (!window.confirm('Termin wirklich absagen?')) return;

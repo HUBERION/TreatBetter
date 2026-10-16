@@ -64,11 +64,13 @@ function eingabe(int $max = 5000): array
     return is_array($d) ? $d : [];
 }
 
-function belegtJePerson(array $cfg, array $personen, int $von, int $bis): array
+/* $ohne: Termin-ID, die nicht als belegt zählt (der eigene Termin beim Verschieben). */
+function belegtJePerson(array $cfg, array $personen, int $von, int $bis, string $ohne = ''): array
 {
     $out = [];
     foreach ($personen as $p) {
-        $out[$p['id']] = array_map(fn($b) => [$b['beginn'], $b['ende']], belegteZeiten($cfg, $p['id'], $von, $bis));
+        $out[$p['id']] = array_values(array_map(fn($b) => [$b['beginn'], $b['ende']],
+            array_filter(belegteZeiten($cfg, $p['id'], $von, $bis), fn($b) => $ohne === '' || $b['id'] !== $ohne)));
     }
     return $out;
 }

@@ -4,7 +4,9 @@
    GET  api.php?a=woche&leistung=…&person=any|…&start=Y-m-d     freie Zeiten für 7 Tage
    POST api.php?a=buchen   (JSON)                               Termin buchen
    GET  api.php?a=termin&t=…                                    gebuchten Termin anzeigen (Storno-Link)
-   POST api.php?a=storno   (JSON {t})                           Termin absagen */
+   POST api.php?a=storno   (JSON {t})                           Termin absagen
+   GET  api.php?a=woche&t=…&person=any|…&start=Y-m-d            freie Zeiten zum Verschieben eines gebuchten Termins
+   POST api.php?a=verschieben (JSON {t, ts, person})            gebuchten Termin selbst verschieben */
 
 declare(strict_types=1);
 
@@ -19,6 +21,25 @@ function personenFuer(array $cfg, string $wahl): array
     if ($wahl === 'any') return $team;
     foreach ($team as $p) if ($p['id'] === $wahl) return [$p];
     antwort(409, ['fehler' => 'Bei dieser Person ist online gerade nichts buchbar. Bitte wähle „Beliebig“ oder ruf uns an.']);
+}
+
+/* Gebuchten Termin über den Link aus der Bestätigung finden. Liefert [Treffer, Infos für die Anzeige]. */
+function buchungZuToken(array $cfg, string $token): array
+{
+    if (!preg_match('/^[A-Za-z0-9_-]{20,64}$/', $token)) antwort(404, ['fehler' => 'Termin nicht gefunden.']);
+    $treffer = buchungFinden($cfg, stornoHash($token));
+    if (!$treffer) antwort(404, ['fehler' => 'Dieser Termin wurde nicht gefunden oder ist bereits abgesagt.']);
+    $t = $treffer['termin'];
+    [$beginn, $ende] = terminZeit($t);
+    $priv = $t['extendedProperties']['private'];
+    $frist = $beginn - REGELN['storno'] * 3600;
+    $info = [
+        'beginn' => $beginn, 'tag' => (new DateTimeImmutable('@' . $beginn))->setTimezone(tz())->format('Y-m-d'),
+        'uhr' => hhmm($beginn), 'bis' => hhmm($ende), 'leistung' => leistungAusTermin($priv),
+        'person' => person($treffer['person'])['name'], 'personId' => $treffer['person'], 'stornierbar' => time() < $frist,
+        'frist' => datumLang($frist) . ', ' . hhmm($frist) . ' Uhr', 'vorbei' => $ende < time(),
+    ];
+    return [$treffer, $info];
 }
 
 $cfg = konfiguration();
@@ -40,16 +61,26 @@ try {
     }
 
     if ($a === 'woche' && $methode === 'GET') {
-        $l = leistung((string) ($_GET['leistung'] ?? '')) ?? antwort(400, ['fehler' => 'Unbekannte Leistung']);
+        // Neu buchen: Dauer der Leistung. Verschieben (t = Link aus der Bestätigung): Dauer des gebuchten Termins,
+        // und der Termin selbst zählt nicht als belegt (sonst ginge z. B. „eine Viertelstunde später“ nicht)
+        $ohne = '';
+        if (isset($_GET['t'])) {
+            [$treffer] = buchungZuToken($cfg, (string) $_GET['t']);
+            [$b0, $e0] = terminZeit($treffer['termin']);
+            $dauer = intdiv($e0 - $b0, 60);
+            $ohne = (string) $treffer['termin']['id'];
+        } else {
+            $dauer = (leistung((string) ($_GET['leistung'] ?? '')) ?? antwort(400, ['fehler' => 'Unbekannte Leistung']))['min'];
+        }
         $personen = personenFuer($cfg, (string) ($_GET['person'] ?? 'any'));
         try { $start = tag((string) ($_GET['start'] ?? '')); } catch (InvalidArgumentException $e) { antwort(400, ['fehler' => 'Ungültiges Datum']); }
         $jetzt = time();
-        $belegt = belegtJePerson($cfg, $personen, $start->getTimestamp(), $start->modify('+7 days')->getTimestamp());
+        $belegt = belegtJePerson($cfg, $personen, $start->getTimestamp(), $start->modify('+7 days')->getTimestamp(), $ohne);
         $tage = [];
         for ($i = 0; $i < 7; $i++) {
             $key = $start->modify("+$i days")->format('Y-m-d');
             $o = oeffnung($key);
-            $frei = freieZeitenTeam($personen, $key, $l['min'], $belegt, $jetzt);
+            $frei = freieZeitenTeam($personen, $key, $dauer, $belegt, $jetzt);
             $tage[] = [
                 'tag' => $key,
                 'zu' => !empty($o['zu']),
@@ -129,19 +160,10 @@ try {
     if (($a === 'termin' && $methode === 'GET') || ($a === 'storno' && $methode === 'POST')) {
         bremse($cfg, 'storno', 30);
         $token = $a === 'termin' ? (string) ($_GET['t'] ?? '') : (string) (eingabe()['t'] ?? '');
-        if (!preg_match('/^[A-Za-z0-9_-]{20,64}$/', $token)) antwort(404, ['fehler' => 'Termin nicht gefunden.']);
-        $treffer = buchungFinden($cfg, stornoHash($token));
-        if (!$treffer) antwort(404, ['fehler' => 'Dieser Termin wurde nicht gefunden oder ist bereits abgesagt.']);
+        [$treffer, $info] = buchungZuToken($cfg, $token);
         $t = $treffer['termin'];
         [$beginn, $ende] = terminZeit($t);
         $priv = $t['extendedProperties']['private'];
-        $frist = $beginn - REGELN['storno'] * 3600;
-        $info = [
-            'beginn' => $beginn, 'tag' => (new DateTimeImmutable('@' . $beginn))->setTimezone(tz())->format('Y-m-d'),
-            'uhr' => hhmm($beginn), 'bis' => hhmm($ende), 'leistung' => leistungAusTermin($priv),
-            'person' => person($treffer['person'])['name'], 'stornierbar' => time() < $frist,
-            'frist' => datumLang($frist) . ', ' . hhmm($frist) . ' Uhr', 'vorbei' => $ende < time(),
-        ];
         if ($a === 'termin') antwort(200, ['termin' => $info]);
         if (!$info['stornierbar']) antwort(409, ['fehler' => 'Online absagen ist nicht mehr möglich. Bitte ruf uns an: ' . telefonText()]);
         terminLoeschen($cfg, $treffer['person'], (string) $t['id']);
@@ -153,6 +175,62 @@ try {
             protokoll($cfg, 'Mail fehlgeschlagen: ' . $e->getMessage());
         }
         antwort(200, ['ok' => true]);
+    }
+
+    if ($a === 'verschieben' && $methode === 'POST') {
+        bremse($cfg, 'storno', 30);
+        $d = eingabe();
+        $token = (string) ($d['t'] ?? '');
+        [$treffer, $alt] = buchungZuToken($cfg, $token);
+        // Verschieben geht wie Absagen nur bis zur Storno-Frist vor dem bisherigen Termin
+        if (!$alt['stornierbar']) antwort(409, ['fehler' => 'Online verschieben ist nicht mehr möglich. Bitte ruf uns an: ' . telefonText()]);
+        $t = $treffer['termin'];
+        $id = (string) $t['id'];
+        [$b0, $e0] = terminZeit($t);
+        $dauer = intdiv($e0 - $b0, 60);
+        $priv = $t['extendedProperties']['private'];
+        $personen = personenFuer($cfg, (string) ($d['person'] ?? 'any'));
+        $ts = (int) ($d['ts'] ?? 0);
+        $key = (new DateTimeImmutable('@' . $ts))->setTimezone(tz())->format('Y-m-d');
+        $von = tag($key)->getTimestamp();
+
+        // Wie beim Buchen nacheinander abarbeiten, damit keine Doppelbuchung entsteht
+        $sperre = fopen($cfg['daten'] . '/buchen.lock', 'c');
+        flock($sperre, LOCK_EX);
+        $frei = freieZeitenTeam($personen, $key, $dauer, belegtJePerson($cfg, $personen, $von, $von + 86400, $id), time());
+        $kandidaten = $frei[$ts] ?? [];
+        if (!$kandidaten) antwort(409, ['fehler' => 'Diese Uhrzeit ist leider gerade vergeben worden. Bitte wähle eine andere.']);
+        // Bei „Beliebig“ möglichst bei derselben Person bleiben
+        $nach = in_array($treffer['person'], $kandidaten, true) ? $treffer['person'] : $kandidaten[0];
+        $ende = $ts + $dauer * 60;
+        terminUmziehen($cfg, $treffer['person'], $nach, $id);
+        terminAendern($cfg, $nach, $id, [
+            'start' => ['dateTime' => rfc3339($ts), 'timeZone' => 'Europe/Vienna'],
+            'end' => ['dateTime' => rfc3339($ende), 'timeZone' => 'Europe/Vienna'],
+            // Neue Fassung für Kalender-Apps, Erinnerung für den neuen Tag wieder offen. Der Link bleibt gültig.
+            'extendedProperties' => ['private' => array_merge($priv, ['folge' => (string) ((int) ($priv['folge'] ?? 0) + 1), 'erinnert' => ''])],
+        ]);
+        flock($sperre, LOCK_UN);
+        $leistungId = (string) ($priv['leistung'] ?? '');
+        if (!empty($priv['kunde'])) karteiBesuchSetzen($cfg, (string) $priv['kunde'], $id, $nach, $ts, $alt['leistung'], $leistungId === 'eigene' ? '' : $leistungId, 'online');
+
+        $p = person($nach);
+        try {
+            mailVerschoben($cfg, [
+                'id' => $id, 'folge' => (int) ($priv['folge'] ?? 0) + 1, 'beginn' => $ts, 'ende' => $ende, 'leistung' => $alt['leistung'],
+                'person' => $p['name'], 'name' => $priv['name'] ?? '', 'mail' => $priv['mail'] ?? '', 'tel' => $priv['tel'] ?? '',
+                'storno_url' => $cfg['basis_url'] . '#storno=' . $token,
+                'alt' => datumLang($b0) . ', ' . hhmm($b0) . ' Uhr bei ' . $alt['person'],
+            ], true);
+        } catch (Throwable $e) {
+            protokoll($cfg, 'Mail fehlgeschlagen: ' . $e->getMessage());
+        }
+        $frist = $ts - REGELN['storno'] * 3600;
+        antwort(200, ['ok' => true, 'termin' => [
+            'beginn' => $ts, 'tag' => $key, 'uhr' => hhmm($ts), 'bis' => hhmm($ende), 'leistung' => $alt['leistung'],
+            'person' => $p['name'], 'personId' => $nach, 'stornierbar' => time() < $frist,
+            'frist' => datumLang($frist) . ', ' . hhmm($frist) . ' Uhr', 'vorbei' => false,
+        ]]);
     }
 
     antwort(404, ['fehler' => 'Unbekannte Anfrage']);

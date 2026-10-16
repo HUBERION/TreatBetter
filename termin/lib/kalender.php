@@ -33,7 +33,7 @@ function belegteZeiten(array $cfg, string $person, int $von, int $bis): array
         if ($e <= $von || $b >= $bis) continue;
         // „Verfügbar“ blockiert nicht, außer bei ganztägigen Terminen (Urlaub ist bei Google standardmäßig „Verfügbar“)
         if (($t['transparency'] ?? 'opaque') === 'transparent' && !$ganztags) continue;
-        $out[] = ['beginn' => $b, 'ende' => $e, 'eigen' => isset($t['extendedProperties']['private']['tb'])];
+        $out[] = ['beginn' => $b, 'ende' => $e, 'eigen' => isset($t['extendedProperties']['private']['tb']), 'id' => (string) ($t['id'] ?? '')];
     }
     return $out;
 }
