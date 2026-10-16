@@ -138,6 +138,9 @@ foreach (['Text' => $ts, 'HTML' => mailText(alsMail('STORNIERUNG', file_get_cont
     pruefe("$weg Storno: Art", $e['art'], 'storno');
     pruefe("$weg Storno: Bestellnummer", $e['nr'], 'T2190000077');
 }
+// Unsichtbare Zeichen zwischen „Bestellreferenz:“ und Nummer (so kommt die Storno-Mail beim Server an)
+pruefe('Storno mit Sonderzeichen vor der Nummer', treatwellLesen('STORNIERUNG', str_replace('Bestellreferenz: T', "Bestellreferenz:​ T", $ts))['nr'], 'T2190000077');
+pruefe('Storno: Nummer als einzige T-Nummer im Text', treatwellLesen('STORNIERUNG', 'Abgesagt. Ref‑T2190000077 xyz')['nr'], 'T2190000077');
 pruefe('Stornierung löscht den Termin', twAnwenden($cfg, treatwellLesen('STORNIERUNG', str_replace('T2190000077', 'T2195121742', $ts)), 'STORNIERUNG', $z), 'storniert');
 pruefe('… Termin ist weg', twTerminFinden($cfg, 'T2195121742'), null);
 pruefe('Stornierung unbekannter Buchung: Hinweis', twAnwenden($cfg, treatwellLesen('Stornierte Treatwell Buchung (Unsere Ref. T2100000000)', ''), 'Storno', $z), 'Hinweis');

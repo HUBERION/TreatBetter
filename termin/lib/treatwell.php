@@ -56,7 +56,10 @@ function treatwellLesen(string $betreff, string $text): array
 {
     $flach = trim(preg_replace('/\s+/u', ' ', $text));
     // „Bestellnr. T…“ (Buchung, Verschiebung), „Bestellreferenz: T…“ bzw. „Bestellnummer T…“ (Stornierung, Betreff nur „STORNIERUNG“)
-    $nr = preg_match('/(?:Bestellnr\.?|Bestellnummer|Bestellreferenz:?)\s*(T\d{6,})/i', $flach, $m) || preg_match('/Ref\.?\s*(T\d{6,})/i', $betreff . ' ' . $flach, $m) ? $m[1] : '';
+    // Zwischen Wort und Nummer können Satz- oder unsichtbare Sonderzeichen stehen (z. B. aus dem HTML der Storno-Mail)
+    $nr = preg_match('/(?:Bestellnr|Bestellnummer|Bestellreferenz)[^A-Za-z0-9]{0,40}?(T\d{6,})/iu', $flach, $m) || preg_match('/Ref\.?\s*(T\d{6,})/i', $betreff . ' ' . $flach, $m) ? $m[1] : '';
+    // Notlösung: genau eine Treatwell-Nummer (T + 10 Ziffern) in der ganzen E-Mail
+    if ($nr === '' && preg_match_all('/(?<![A-Za-z0-9])(T\d{10})(?!\d)/u', $flach, $alle) && count(array_unique($alle[1])) === 1) $nr = $alle[1][0];
     $b = mb_strtolower($betreff);
     $art = str_contains($b, 'storn') || str_contains($b, 'abgesagt') || str_contains($b, 'cancel') ? 'storno'
         : (preg_match('/(geändert|änderung|umgebucht|verschoben|neuer termin)/u', $b) ? 'aenderung'
