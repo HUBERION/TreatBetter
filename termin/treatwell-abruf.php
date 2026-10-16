@@ -43,6 +43,19 @@ if (isset($_GET['pruefen']) || in_array('--pruefen', $argv ?? [], true)) {
         preg_match('/^content-type:\s*([^;\r\n]+)/im', $roh, $ct);
         $teile = preg_match_all('/^content-type:\s*(text\/\w+)/im', $roh, $tt) ? implode(', ', $tt[1]) : '-';
         echo "\n" . date('d.m. H:i', $mail['datum']) . " | {$mail['betreff']} | " . ($ct[1] ?? '?') . " | Teile: $teile\n";
+        $nr = treatwellAusMail($mail)['nr'];
+        if ($nr !== '') {
+            // Steht der Termin noch im Kalender? Einmal über Googles Suche, einmal durch Durchsehen aller Termine
+            foreach (['Suche' => true, 'Durchsehen' => false] as $wie => $filter) {
+                try {
+                    $t = twTerminFinden($cfg, $nr, $filter, false);
+                    echo "  Kalender ($wie): " . ($t ? 'gefunden bei ' . $t['person'] . ', ' . date('d.m. H:i', terminZeit($t['termin'])[0]) . ', tb=' . (isset($t['termin']['extendedProperties']['private']['tb']) ? 'ja' : 'nein') : 'nicht gefunden') . "\n";
+                } catch (Throwable $ex) {
+                    echo "  Kalender ($wie): Fehler " . $ex->getMessage() . "\n";
+                }
+                if (!$filter) break;
+            }
+        }
         foreach (['Text' => $mail['text'], 'HTML' => $mail['textHtml'] ?? ''] as $weg => $t) {
             if ($t === '') { echo "  $weg: (leer)\n"; continue; }
             $e = treatwellLesen($mail['betreff'], $t);
@@ -56,6 +69,21 @@ if (isset($_GET['pruefen']) || in_array('--pruefen', $argv ?? [], true)) {
         }
     }
     $imap->abmelden();
+    // Was steht in den Buchungskalendern? Nur Anzahl, Datum und Treatwell-Nummern, keine Namen
+    echo "\nKalender (nächste 60 Tage):\n";
+    foreach (TEAM as $p) {
+        try {
+            $alle = googleTermine($cfg, kalenderId($cfg, $p['id']), ['timeMin' => rfc3339(time() - 86400), 'timeMax' => rfc3339(time() + 60 * 86400)]);
+            echo "  {$p['id']}: " . count($alle) . " Termine\n";
+            foreach ($alle as $t) {
+                $priv = $t['extendedProperties']['private'] ?? [];
+                if (($priv['quelle'] ?? '') !== 'treatwell' && empty($priv['tw'])) continue;
+                echo '    ' . date('d.m. H:i', terminZeit($t)[0]) . ' Status ' . ($t['status'] ?? '?') . ', quelle ' . ($priv['quelle'] ?? '–') . ', tw ' . ($priv['tw'] ?? '–') . ', tb ' . ($priv['tb'] ?? '–') . "\n";
+            }
+        } catch (Throwable $ex) {
+            echo "  {$p['id']}: Fehler " . $ex->getMessage() . "\n";
+        }
+    }
     exit(0);
 }
 

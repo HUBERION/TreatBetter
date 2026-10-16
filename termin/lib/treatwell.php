@@ -142,19 +142,20 @@ function twHinweis(array &$z, string $text, string $betreff = '', string $nr = '
 }
 
 /* Bestehenden Termin zu einer Treatwell-Bestellnummer finden: ['person' => id, 'termin' => array] oder null. */
-function twTerminFinden(array $cfg, string $nr): ?array
+function twTerminFinden(array $cfg, string $nr, bool $mitFilter = true, bool $ausweichen = true): ?array
 {
     $von = time() - 30 * 86400;
     $bis = time() + 400 * 86400;
     foreach (TEAM as $p) {
         $termine = $cfg['modus'] === 'demo'
             ? demoTermine($cfg, $p['id'])
-            : googleTermine($cfg, kalenderId($cfg, $p['id']), ['privateExtendedProperty' => 'tw=' . $nr, 'timeMin' => rfc3339($von), 'timeMax' => rfc3339($bis)]);
+            : googleTermine($cfg, kalenderId($cfg, $p['id']), ($mitFilter ? ['privateExtendedProperty' => 'tw=' . $nr] : []) + ['timeMin' => rfc3339($von), 'timeMax' => rfc3339($bis)]);
         foreach ($termine as $t) {
             if (($t['status'] ?? '') !== 'cancelled' && ($t['extendedProperties']['private']['tw'] ?? '') === $nr) return ['person' => $p['id'], 'termin' => $t];
         }
     }
-    return null;
+    // Googles Suche nach Zusatzfeldern hinkt nach einem Verschieben manchmal hinterher: dann alle Termine durchsehen
+    return $mitFilter && $ausweichen && $cfg['modus'] !== 'demo' ? twTerminFinden($cfg, $nr, false) : null;
 }
 
 /* Treatwell-E-Mail auswerten. Treatwell schreibt Text- und HTML-Teil nicht immer gleich

@@ -157,7 +157,9 @@ function terminHolen(array $cfg, string $person, string $id): ?array
     return ($t['status'] ?? '') === 'cancelled' ? null : $t;
 }
 
-/* Termin in den Kalender einer anderen Person verschieben (Termin-ID bleibt gleich). */
+/* Termin in den Kalender einer anderen Person verschieben (Termin-ID bleibt gleich).
+   Google gibt private Zusatzfelder beim Verschieben in einen anderen Kalender nicht mit
+   (sie gehören zur „Kopie in diesem Kalender“). Deshalb vorher merken und danach wieder setzen. */
 function terminUmziehen(array $cfg, string $von, string $nach, string $id): void
 {
     if ($von === $nach) return;
@@ -172,8 +174,12 @@ function terminUmziehen(array $cfg, string $von, string $nach, string $id): void
         demoSpeichern($cfg, $alle);
         return;
     }
+    $vorher = googleAnfrage($cfg, 'GET', '/calendars/' . rawurlencode(kalenderId($cfg, $von)) . '/events/' . rawurlencode($id),
+        ['fields' => 'extendedProperties']);
+    $privat = $vorher['extendedProperties']['private'] ?? [];
     googleAnfrage($cfg, 'POST', '/calendars/' . rawurlencode(kalenderId($cfg, $von)) . '/events/' . rawurlencode($id) . '/move',
         ['destination' => kalenderId($cfg, $nach)]);
+    if ($privat) terminAendern($cfg, $nach, $id, ['extendedProperties' => ['private' => $privat]]);
 }
 
 /* Anzahl eigener Buchungen einer Person an einem Tag (für die Verteilung bei „Beliebig“). */
