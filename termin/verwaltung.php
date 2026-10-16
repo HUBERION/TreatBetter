@@ -21,11 +21,24 @@ header('X-Frame-Options: DENY');
 const SITZUNG_COOKIE = 'tb_verwaltung';
 const SITZUNG_TAGE = 30;
 
+/* Passwort: Das im Dashboard geänderte steht als Hash in daten/zugang.json und gilt vor dem aus der Konfiguration.
+   'stand' wechselt bei jeder Änderung und steckt in der Signatur, damit alte Anmeldungen ungültig werden. */
+function zugang(array $cfg): array
+{
+    $f = $cfg['daten'] . '/zugang.json';
+    $z = is_file($f) ? (json_decode((string) file_get_contents($f), true) ?: []) : [];
+    return [
+        'passwort' => is_string($z['passwort'] ?? null) && $z['passwort'] !== '' ? $z['passwort'] : $cfg['verwaltung_passwort'],
+        'stand' => (string) ($z['stand'] ?? ''),
+    ];
+}
+
 /* Anmeldung als signiertes Cookie: Ablaufzeit + HMAC. Kein Server-Speicher nötig.
-   Alle Sitzungen beenden: 'verwaltung_geheimnis' in der Konfiguration ändern. */
+   Alle Sitzungen beenden: Passwort im Dashboard ändern oder 'verwaltung_geheimnis' in der Konfiguration ändern. */
 function sitzungWert(array $cfg, int $bis): string
 {
-    return $bis . '.' . hash_hmac('sha256', 'verwaltung|' . $bis, $cfg['verwaltung_geheimnis']);
+    $stand = zugang($cfg)['stand'];
+    return $bis . '.' . hash_hmac('sha256', 'verwaltung|' . $bis . ($stand !== '' ? '|' . $stand : ''), $cfg['verwaltung_geheimnis']);
 }
 
 function angemeldet(array $cfg): bool
@@ -125,7 +138,7 @@ try {
     if ($a === 'login' && $methode === 'POST') {
         bremse($cfg, 'login', 10, 'Zu viele Anmeldeversuche. Bitte in einer Stunde noch einmal.');
         $pw = (string) (eingabe()['passwort'] ?? '');
-        if (!password_verify($pw, $cfg['verwaltung_passwort'])) {
+        if (!password_verify($pw, zugang($cfg)['passwort'])) {
             usleep(500000);
             antwort(401, ['fehler' => 'Das Passwort stimmt nicht.']);
         }
@@ -140,6 +153,29 @@ try {
     }
 
     if (!angemeldet($cfg)) antwort(401, ['fehler' => 'Bitte anmelden.']);
+
+    if ($a === 'passwort' && $methode === 'POST') {
+        bremse($cfg, 'passwort', 10, 'Zu viele Versuche. Bitte in einer Stunde noch einmal.');
+        $d = eingabe();
+        $alt = (string) ($d['alt'] ?? '');
+        $neu = (string) ($d['neu'] ?? '');
+        if (!password_verify($alt, zugang($cfg)['passwort'])) {
+            usleep(500000);
+            antwort(400, ['fehler' => 'Das bisherige Passwort stimmt nicht.', 'feld' => 'alt']);
+        }
+        if (mb_strlen($neu) < 10) antwort(400, ['fehler' => 'Das neue Passwort braucht mindestens 10 Zeichen.', 'feld' => 'neu']);
+        if (mb_strlen($neu) > 200) antwort(400, ['fehler' => 'Das neue Passwort ist zu lang.', 'feld' => 'neu']);
+        if ($neu !== (string) ($d['neu2'] ?? '')) antwort(400, ['fehler' => 'Die beiden neuen Passwörter sind nicht gleich.', 'feld' => 'neu2']);
+        if (password_verify($neu, zugang($cfg)['passwort'])) antwort(400, ['fehler' => 'Das neue Passwort ist dasselbe wie das bisherige.', 'feld' => 'neu']);
+        $f = $cfg['daten'] . '/zugang.json';
+        $json = json_encode(['passwort' => password_hash($neu, PASSWORD_DEFAULT), 'stand' => bin2hex(random_bytes(8)), 'geaendert' => date('c')], JSON_PRETTY_PRINT);
+        if (file_put_contents($f, $json, LOCK_EX) === false) antwort(500, ['fehler' => 'Das Passwort konnte nicht gespeichert werden.']);
+        @chmod($f, 0600);
+        // Alle anderen Geräte sind jetzt abgemeldet, dieses bleibt angemeldet
+        $bis = time() + SITZUNG_TAGE * 86400;
+        cookieSetzen(sitzungWert($cfg, $bis), $bis);
+        antwort(200, ['ok' => true]);
+    }
 
     if ($a === 'daten' && $methode === 'GET') {
         try { $start = tag((string) ($_GET['von'] ?? '')); } catch (InvalidArgumentException $e) { antwort(400, ['fehler' => 'Ungültiges Datum']); }

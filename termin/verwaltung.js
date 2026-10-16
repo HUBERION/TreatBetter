@@ -401,6 +401,17 @@
   </div>
 </section>
 <section class="panel">
+  <h2>Passwort ändern</h2>
+  <p class="muted small" style="margin:6px 0 4px">Das neue Passwort gilt sofort. Alle anderen Geräte werden abgemeldet und brauchen dann das neue Passwort.</p>
+  <form class="stack" data-submit="passwort" novalidate style="max-width:420px">
+    <div class="field"><label for="pw-alt">Bisheriges Passwort</label><input id="pw-alt" name="alt" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="pw-neu">Neues Passwort</label><input id="pw-neu" name="neu" type="password" autocomplete="new-password" minlength="10" required aria-describedby="pw-hinweis"><span class="muted small" id="pw-hinweis">Mindestens 10 Zeichen.</span></div>
+    <div class="field"><label for="pw-neu2">Neues Passwort wiederholen</label><input id="pw-neu2" name="neu2" type="password" autocomplete="new-password" required></div>
+    <p class="err" id="pw-fehler" role="alert"></p>
+    <div><button type="submit" class="btn-primary">Passwort ändern</button></div>
+  </form>
+</section>
+<section class="panel">
   <h2>Abmelden</h2>
   <p class="muted small" style="margin:6px 0 10px">Auf diesem Gerät bleibt man sonst 30 Tage angemeldet.</p>
   <button type="button" class="btn-danger" data-act="logout">Abmelden</button>
@@ -991,6 +1002,29 @@
         btn.disabled = false;
         form.elements.namedItem('passwort').select();
       }
+    } else if (form.dataset.submit === 'passwort') {
+      const el = (n) => form.elements.namedItem(n);
+      const fehlerEl = document.getElementById('pw-fehler');
+      const zeige = (msg, feld) => {
+        fehlerEl.textContent = msg;
+        ['alt', 'neu', 'neu2'].forEach((n) => el(n).removeAttribute('aria-invalid'));
+        if (feld) { el(feld).setAttribute('aria-invalid', 'true'); el(feld).focus(); }
+      };
+      const werte = { alt: el('alt').value, neu: el('neu').value, neu2: el('neu2').value };
+      if (!werte.alt) return zeige('Bitte das bisherige Passwort eingeben.', 'alt');
+      if (werte.neu.length < 10) return zeige('Das neue Passwort braucht mindestens 10 Zeichen.', 'neu');
+      if (werte.neu !== werte.neu2) return zeige('Die beiden neuen Passwörter sind nicht gleich.', 'neu2');
+      const btn = form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        await api('passwort', {}, werte);
+        form.reset();
+        zeige('');
+        toast('Passwort geändert. Andere Geräte sind jetzt abgemeldet.');
+      } catch (e) {
+        if (e.status !== 401) zeige(e.message, e.data && e.data.feld);
+      }
+      btn.disabled = false;
     } else if (form.dataset.submit === 'suche') {
       suche.q = form.elements.namedItem('q').value.trim();
       suche.laedt = true; suche.fehler = ''; render();
@@ -1058,7 +1092,7 @@
   }
   window.addEventListener('hashchange', () => { window.scrollTo(0, 0); laden(); });
   // Alle 60 Sekunden still neu laden, wenn das Fenster sichtbar ist und kein Dialog offen ist
-  setInterval(() => { if (angemeldet && !M && document.visibilityState === 'visible' && !['kunden', 'kunde'].includes(route().view)) laden(true); }, 60000);
+  setInterval(() => { if (angemeldet && !M && document.visibilityState === 'visible' && !['kunden', 'kunde', 'einstellungen'].includes(route().view)) laden(true); }, 60000);
   setInterval(() => { if (angemeldet && document.visibilityState === 'visible') treatwellAbruf(); }, 120000);
 
   // Neue Treatwell-E-Mails abholen lassen (der Server prüft höchstens alle 2 Minuten)
@@ -1067,7 +1101,7 @@
     try {
       const r = await api('treatwell-abruf', {}, {});
       if (D) D.treatwell = r.treatwell;
-      if (r.neu > 0) { toast(r.neu === 1 ? '1 Treatwell-Buchung übernommen.' : r.neu + ' Treatwell-Buchungen übernommen.'); laden(true); } else if (!M) render();
+      if (r.neu > 0) { toast(r.neu === 1 ? '1 Treatwell-Buchung übernommen.' : r.neu + ' Treatwell-Buchungen übernommen.'); laden(true); } else if (!M && route().view !== 'einstellungen') render(); // Formular in den Einstellungen nicht leeren
     } catch (e) { /* nicht schlimm, nächstes Mal wieder */ }
   }
   document.addEventListener('visibilitychange', () => { if (angemeldet && !M && document.visibilityState === 'visible') laden(true); });
