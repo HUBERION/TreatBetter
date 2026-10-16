@@ -278,9 +278,11 @@ h1, h2, h3, p { margin: 0; }
 .mylist .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
 /* ---------- Verwaltung ---------- */
-.admin { display: flex; flex-wrap: wrap; min-height: calc(100vh - 44px); }
+.admin { position: relative; display: flex; flex-wrap: wrap; min-height: calc(100vh - 44px); padding-top: 8px; }
 /* Rauchiger Streifen oben wie auf der Homepage (Buchungsseite und Dashboard) */
-.phone::before, .admin::before { content: ""; display: block; flex: none; width: 100%; height: 8px; background: url(rauch.svg) center 45% / 100% auto no-repeat, var(--grad-salon); }
+.phone::before { content: ""; display: block; flex: none; width: 100%; height: 8px; background: url(rauch.svg) center 45% / 100% auto no-repeat, var(--grad-salon); }
+/* Im Dashboard liegt der Streifen fest oben und nimmt an der Aufteilung nicht teil (sonst verschiebt sich je nach Seitenlänge alles) */
+.admin::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: url(rauch.svg) center 45% / 100% auto no-repeat, var(--grad-salon); }
 .side { flex: 1 1 220px; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border-right: 1px solid var(--line); }
 .side-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
 .side-brand > div { display: flex; flex-direction: column; }
