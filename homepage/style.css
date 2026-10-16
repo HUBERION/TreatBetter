@@ -62,10 +62,11 @@ p { margin: 0; }
 /* ---------- Kopfzeile ---------- */
 .top {
   position: sticky; top: 0; z-index: 20;
-  border-top: 4px solid transparent; border-image: var(--grad-salon) 1;
   background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
+/* Rauchiger Streifen oben, gleiches Folienmuster wie der Abschlussbalken */
+.top::before { content: ""; display: block; height: 8px; background: url(rauch.svg) center 45% / 100% auto no-repeat, var(--grad-salon); }
 .top-in { display: flex; align-items: center; gap: 16px; min-height: 64px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-family: var(--serif); font-size: 19px; min-height: 44px; }
 .brand:hover { color: var(--plum-d); }
