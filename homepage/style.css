@@ -140,8 +140,10 @@ p { margin: 0; }
 .contact-list a { font-size: 20px; font-weight: 700; text-decoration: none; padding: 6px 0; }
 
 /* ---------- Abschluss ---------- */
-.cta { background: var(--grad-salon); color: #fff; }
-.cta-in { padding-top: 56px; padding-bottom: 56px; text-align: center; }
+/* Rauch wie auf der Fensterfolie: Schleier (rauch.svg) über dem Farbverlauf */
+.cta { background: url(rauch.svg) center / cover no-repeat, var(--grad-salon); color: #fff; }
+.cta-in { padding-top: 64px; padding-bottom: 64px; text-align: center; }
+.cta h2, .cta p { text-shadow: 0 1px 12px rgba(40, 10, 50, .45); }
 .cta h2 { color: #fff; font-size: clamp(28px, 4vw, 40px); }
 .cta p { margin-top: 10px; opacity: .92; }
 .cta .actions { justify-content: center; }
