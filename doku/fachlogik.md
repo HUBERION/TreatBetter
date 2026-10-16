@@ -7,7 +7,7 @@ Wie die Testversion entscheidet, wann ein Termin frei ist, und welche Daten übe
 ```
 frei = Öffnungszeiten des Salons
      ∩ Arbeitszeit der Person          (derzeit = Öffnungszeiten)
-     − belegte Zeiten aus Outlook      (nur Status, die laut Einstellung blockieren)
+     − belegte Zeiten aus Google Kalender (nur Arten, die laut Einstellung blockieren)
      − Puffer vor und nach jedem belegten Termin
      − Vorlaufzeit ab jetzt
      − alles nach dem Buchungshorizont
@@ -41,18 +41,23 @@ Feiertage berechnet `holidays(jahr)` für jedes Jahr selbst:
 
 Der Kärntner Landesfeiertag (10. Oktober) ist kein allgemeiner Feiertag und daher nicht enthalten. Soll der Salon an dem Tag zu haben, wäre das eine manuelle Ausnahme.
 
-## Outlook-Status
+## Termine aus dem Google Kalender
 
-Aus Outlook wird nur gelesen, **wann** jemand belegt ist, nie was eingetragen ist. Welche Status einen Termin blockieren, legt die Verwaltung unter Team & Outlook fest (`S.blockers`):
+Das Team nutzt den Kalender am Android-Handy, die Termine liegen im Google-Konto (Annahme, siehe [roadmap.md](roadmap.md#offene-fragen-an-den-salon)). Aus dem Google Kalender wird nur gelesen, **wann** jemand belegt ist, nie was eingetragen ist. Welche Arten von Terminen blockieren, legt die Verwaltung unter Team & Kalender fest (`S.blockers`):
 
-| Outlook „Anzeigen als“ | Schlüssel in `S.blockers` | Microsoft Graph `scheduleItem.status` | Standard |
+| Im Google Kalender | Schlüssel in `S.blockers` | Merkmal in der Google Calendar API | Standard |
 |---|---|---|---|
-| Gebucht | `busy` | `busy` | blockiert |
-| Abwesend | `oof` | `oof` | blockiert |
-| Mit Vorbehalt | `tentative` | `tentative` | blockiert |
-| An anderem Ort tätig | `elsewhere` | `workingElsewhere` | blockiert nicht |
-| Frei | – | `free` | blockiert nie |
-| Ganztägige Termine (z. B. Urlaub) | `allDay` | Eintrag über den ganzen Tag | blockiert |
+| Normaler Termin, „Beschäftigt“ | `busy` | `transparency: opaque` | blockiert |
+| Abwesend | `oof` | `eventType: outOfOffice` | blockiert |
+| Einladung mit Antwort „Vielleicht“ | `tentative` | eigene `responseStatus: tentative` | blockiert |
+| Termin als „Verfügbar“ markiert | `elsewhere` | `transparency: transparent` | blockiert nicht |
+| Ganztägige Termine (z. B. Urlaub) | `allDay` | `start.date` statt `start.dateTime` | blockiert |
+
+Die Schlüssel stammen noch aus der Outlook-Planung (`elsewhere` hieß „An anderem Ort tätig“) und bleiben gleich, damit gespeicherte Testdaten gültig bleiben.
+
+**Achtung:** Ganztägige Termine sind in Google standardmäßig „Verfügbar“. Damit Urlaub trotzdem blockiert, wertet die Seite ganztägige Termine eigens aus (`allDay`).
+
+Im [empfohlenen Aufbau mit einem Salon-Konto](roadmap.md#empfohlener-aufbau-ein-google-konto-für-den-salon) geben Andrea und Pamela ihre eigenen Kalender nur als „frei/beschäftigt“ frei. Für diese Kalender gibt es dann nur „belegt“ ohne Art, die Tabelle oben gilt nur für die Buchungskalender des Salons. Urlaub muss dort als „Beschäftigt“ eingetragen sein.
 
 Über die Seite gebuchte Termine (`kind: 'booking'`) blockieren immer.
 
@@ -67,10 +72,10 @@ Aus Outlook wird nur gelesen, **wann** jemand belegt ist, nie was eingetragen is
 
 | Darstellung | Bedeutung |
 |---|---|
-| Pflaume, gefüllt | über die Seite gebucht (steht im echten Betrieb auch in Outlook) |
+| Pflaume, gefüllt | über die Seite gebucht (steht im echten Betrieb auch im Google Kalender) |
 | Pflaume mit gelbem Rand, „NEU“ | in diesem Browser als Test gebucht |
-| Grau, gefüllt | belegt laut Outlook, ohne Details |
-| Weiß, grau gestrichelt | in Outlook eingetragen, blockiert laut Einstellung aber nicht |
+| Grau, gefüllt | belegt laut Google Kalender, ohne Details |
+| Weiß, grau gestrichelt | im Google Kalender eingetragen, blockiert laut Einstellung aber nicht |
 | Grün, gestrichelt | frei und online buchbar (Lücken ab 15 Min.) |
 | Schraffiert | geschlossen bzw. außerhalb der Öffnungszeiten |
 | Orange Linie | jetzt |
@@ -121,4 +126,4 @@ Telefon: 0463 51 59 52 · 0676 460 48 83
 
 Laut Profil außerdem: barrierefrei, vegane und natürliche Produkte, Parkplätze in der Nähe.
 
-**Nur Beispieldaten**, nicht echt: alle Kundennamen, alle belegten Outlook-Zeiten, die ganztägige Abwesenheit von Andrea an jedem zweiten Freitag, die „Neue Kollegin“ im Team sowie die Arbeitszeiten von Andrea und Pamela (derzeit gleich den Öffnungszeiten).
+**Nur Beispieldaten**, nicht echt: alle Kundennamen, alle belegten Zeiten aus dem Google Kalender, die ganztägige Abwesenheit von Andrea an jedem zweiten Freitag, die „Neue Kollegin“ im Team sowie die Arbeitszeiten von Andrea und Pamela (derzeit gleich den Öffnungszeiten).

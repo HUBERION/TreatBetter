@@ -84,15 +84,15 @@
 
   const STAFF = [
     { id: 'andrea', name: 'Andrea', role: 'Friseurmeisterin · Inhaberin', initial: 'A', bg: '#EBDDEE', fg: '#4E1F53', synced: 'vor 1 Min.',
-      calendars: [['kalender', 'Kalender', true], ['salon', 'Salon-Termine', true], ['geb', 'Geburtstage', false]] },
+      calendars: [['buchungen', 'Buchungen Andrea (Salon-Konto)', true], ['eigen', 'Eigener Kalender von Andrea', true]] },
     { id: 'pamela', name: 'Pamela', role: 'Friseurin', initial: 'P', bg: '#DCEBE3', fg: '#17573A', synced: 'vor 3 Min.',
-      calendars: [['kalender', 'Kalender', true], ['geb', 'Geburtstage', false]] },
+      calendars: [['buchungen', 'Buchungen Pamela (Salon-Konto)', true], ['eigen', 'Eigener Kalender von Pamela', true]] },
   ];
   const staffById = (id) => STAFF.find((p) => p.id === id) || { id, name: id, initial: '?' };
 
   /* ---------- Beispiel-Kalender ----------
      Je Person und Wochentag (1 = Montag). booking = über die Seite gebucht,
-     busy = belegt laut Outlook (show: busy = Gebucht, tentative = Mit Vorbehalt, oof = Abwesend). */
+     busy = belegt laut Google Kalender (show: busy = Beschäftigt, tentative = Einladung mit „Vielleicht“, oof = Abwesend). */
   const B = (s, e, show, extra) => Object.assign({ kind: 'busy', s: toMin(s), e: toMin(e), show: show || 'busy' }, extra);
   const K = (s, who, id, extra) => {
     const x = Object.assign({ min: svc(id).min, label: svc(id).name, price: svc(id).price }, extra);
@@ -119,8 +119,8 @@
       5: [B('07:30', '09:00'), K('10:00', 'N. Wolf', 'waschen-legen'), B('12:00', '12:45'), B('17:00', '18:30')],
     },
   };
-  const BLOCKERS = [['busy', 'Gebucht'], ['oof', 'Abwesend'], ['tentative', 'Mit Vorbehalt'], ['elsewhere', 'An anderem Ort tätig'], ['allDay', 'Ganztägige Termine, z. B. Urlaub']];
-  const SHOW_LABEL = { busy: 'Belegt', oof: 'Abwesend', tentative: 'Mit Vorbehalt', elsewhere: 'An anderem Ort' };
+  const BLOCKERS = [['busy', 'Normale Termine („Beschäftigt“)'], ['oof', 'Abwesend'], ['tentative', 'Einladungen mit Antwort „Vielleicht“'], ['elsewhere', 'Termine, die als „Verfügbar“ markiert sind'], ['allDay', 'Ganztägige Termine, z. B. Urlaub']];
+  const SHOW_LABEL = { busy: 'Belegt', oof: 'Abwesend', tentative: 'Vielleicht', elsewhere: 'Verfügbar' };
 
   /* ---------- Österreichische Feiertage ---------- */
   function easter(y) {
@@ -163,7 +163,6 @@
       autoHolidays: true,
       blockers: { busy: true, oof: true, tentative: true, elsewhere: false, allDay: true },
       calendars: {},
-      writeTo: {},
       bookable: { andrea: true, pamela: true },
       bookings: [],
       status: {},
@@ -176,7 +175,7 @@
       const raw = window.localStorage.getItem(STORE);
       if (!raw) return base;
       const p = JSON.parse(raw);
-      ['hours', 'rules', 'blockers', 'calendars', 'writeTo', 'bookable', 'status'].forEach((k) => {
+      ['hours', 'rules', 'blockers', 'calendars', 'bookable', 'status'].forEach((k) => {
         if (p[k] && typeof p[k] === 'object') base[k] = Object.assign(base[k], p[k]);
       });
       if (Array.isArray(p.bookings)) base.bookings = p.bookings.filter((b) => b && svc(b.svc) && /^\d{4}-\d{2}-\d{2}$/.test(b.key));
@@ -278,7 +277,7 @@
     <span class="menu-label">Für das Salon-Team</span>
     <a class="menu-item" href="#/verwaltung">${ic('lock')}Verwaltung: Kalender</a>
     <a class="menu-item" href="#/verwaltung/oeffnungszeiten">${ic('clock')}Verwaltung: Öffnungszeiten</a>
-    <a class="menu-item" href="#/verwaltung/team">${ic('users')}Verwaltung: Team &amp; Outlook</a>
+    <a class="menu-item" href="#/verwaltung/team">${ic('users')}Verwaltung: Team &amp; Kalender</a>
   </nav>
   <button type="button" class="menu-scrim" data-act="menu" aria-label="Menü schließen"></button>
 </div>`;
@@ -309,9 +308,8 @@
   <button type="button" class="icon-btn" data-act="menu" aria-expanded="${U.menu}" aria-label="${U.menu ? 'Menü schließen' : 'Menü öffnen'}">${ic(U.menu ? 'close' : 'menu', 24, 2)}</button>
 </header>
 ${U.menu ? menuHtml() : ''}
-<img class="hero" src="salonfoto.jpg" alt="Schaufenster von Friseur Andrea Zechmeister in der August-Jaksch-Straße" width="738" height="360">
+<div class="hero"><h1><img class="logo" src="logo.jpg" alt="Friseur Andrea Zechmeister" width="1600" height="653"></h1></div>
 <section class="info">
-  <div class="title-block"><span class="overline">Friseur</span><h1>Andrea Zechmeister</h1></div>
   <p class="row">${ic('pin', 18)}<span>${SALON.street}, ${SALON.city}</span></p>
   <p class="row">${ic('clock', 18)}<span>${status}</span></p>
   <p class="row">${ic('phone', 18)}<span>${phoneLinks()}</span></p>
@@ -395,7 +393,7 @@ ${U.menu ? menuHtml() : ''}
   </div>
 </div>
 <div class="week">${daysHtml}</div>
-<p class="sync">${ic('sync', 16, 2)}<span>${longDate(sel.d)} · freie Zeiten aus den Outlook-Kalendern</span></p>
+<p class="sync">${ic('sync', 16, 2)}<span>${longDate(sel.d)} · freie Zeiten aus den Google Kalendern</span></p>
 <div class="slots">${groups}${empty}</div>`;
   }
 
@@ -463,7 +461,7 @@ ${U.menu ? menuHtml() : ''}
 <div class="done">
   <span class="done-icon">${ic('check', 36, 2.2)}</span>
   <h1>Termin gebucht!</h1>
-  <p>Im echten Betrieb ginge jetzt eine Bestätigung an <b>${esc(b.mail)}</b>, und der Termin stünde sofort im Outlook-Kalender von ${esc(p.name)}.</p>
+  <p>Im echten Betrieb ginge jetzt eine Bestätigung an <b>${esc(b.mail)}</b>, und der Termin stünde sofort im Kalender „Buchungen ${esc(p.name)}“ und damit auf dem Handy von ${esc(p.name)}.</p>
 </div>
 <dl class="card details">
   <dt>Wann</dt><dd><b>${longDate(d)}</b><br>${fmt(b.start)}–${fmt(b.end)} Uhr</dd>
@@ -514,7 +512,7 @@ ${U.menu ? menuHtml() : ''}
       ${link('#/verwaltung', 'cal', 'Kalender', 'verwaltung')}
       ${soon('list', 'Buchungen')}
       ${soon('scissors', 'Leistungen')}
-      ${link('#/verwaltung/team', 'users', 'Team &amp; Outlook', 'verwaltung/team')}
+      ${link('#/verwaltung/team', 'users', 'Team &amp; Kalender', 'verwaltung/team')}
       ${link('#/verwaltung/oeffnungszeiten', 'clock', 'Öffnungszeiten', 'verwaltung/oeffnungszeiten')}
       ${soon('sliders', 'Einstellungen')}
     </div>
@@ -568,7 +566,7 @@ ${U.menu ? menuHtml() : ''}
         }
         if (e.allDay && o.closed) return;
         const a = e.allDay ? o.from : e.s, b = e.allDay ? o.to : e.e;
-        const label = (e.allDay ? 'Abwesend, ganztägig' : SHOW_LABEL[e.show]) + ' (Outlook)';
+        const label = (e.allDay ? 'Abwesend, ganztägig' : SHOW_LABEL[e.show]) + ' (Google)';
         const range = e.allDay ? 'ganzer Tag' : fmt(e.s) + '–' + fmt(e.e);
         if (isBlocking(e)) add(a, b, 'blk-busy', label + ' · ' + range, label, range);
         else add(a, b, 'blk-soft', label + ' · blockiert nicht', label, range + ' · blockiert nicht');
@@ -612,7 +610,7 @@ ${U.menu ? menuHtml() : ''}
       </div>`;
     }).join('') || `<p class="muted" style="font-size:14px;padding:8px 0">${o.closed ? 'Der Salon hat an diesem Tag geschlossen.' : 'Keine Online-Buchungen an diesem Tag.'}</p>`;
 
-    const pills = STAFF.map((p) => `<span class="pill"><i${S.bookable[p.id] ? '' : ' class="off"'}></i><b>${p.name}</b> Outlook abgeglichen ${p.synced}${S.bookable[p.id] ? '' : ' · online nicht buchbar'}</span>`).join('');
+    const pills = STAFF.map((p) => `<span class="pill"><i${S.bookable[p.id] ? '' : ' class="off"'}></i><b>${p.name}</b> Google Kalender abgeglichen ${p.synced}${S.bookable[p.id] ? '' : ' · online nicht buchbar'}</span>`).join('');
     const subtitle = longDate(d) + ' ' + d.getFullYear() + (isToday ? ' · heute' : '') + (o.note ? ' · ' + esc(o.note) : '');
 
     return `<div class="pagehead">
@@ -645,10 +643,10 @@ ${U.menu ? menuHtml() : ''}
     <section class="panel">
       <h2>Legende</h2>
       <div class="legend">
-        <div><span class="sw" style="background:#6A2C70"></span>Online gebucht, steht auch in Outlook</div>
+        <div><span class="sw" style="background:#6A2C70"></span>Online gebucht, steht auch im Google Kalender</div>
         <div><span class="sw" style="background:#7E3485;box-shadow:inset 0 0 0 2px #F3C969"></span>In diesem Test gebucht</div>
-        <div><span class="sw" style="background:#E6E2EA"></span>Belegt laut Outlook, ohne Details</div>
-        <div><span class="sw" style="background:#FFFFFF;border:1.5px dashed #B9B3C0"></span>In Outlook, blockiert laut Einstellung nicht</div>
+        <div><span class="sw" style="background:#E6E2EA"></span>Belegt laut Google Kalender, ohne Details</div>
+        <div><span class="sw" style="background:#FFFFFF;border:1.5px dashed #B9B3C0"></span>Im Google Kalender, blockiert laut Einstellung nicht</div>
         <div><span class="sw" style="background:#EEF7F2;border:1.5px dashed #2E8B5B"></span>Frei und online buchbar</div>
         <div><span class="sw" style="background:repeating-linear-gradient(135deg,#DDD8E2 0 4px,#F8F7FA 4px 8px)"></span>Geschlossen</div>
         <div><span class="sw" style="height:2px;background:#C2410C"></span>Jetzt</div>
@@ -687,13 +685,13 @@ ${U.menu ? menuHtml() : ''}
     </div>`;
     return `<div class="pagehead">
   <div><h1>Öffnungszeiten &amp; Buchungsregeln</h1>
-    <p class="lead">Der Rahmen für alle Online-Termine. Angeboten wird nur, was zusätzlich im Outlook-Kalender der jeweiligen Person frei ist. In dieser Testversion wirken Änderungen sofort auf die <a href="#/">Buchungsseite</a>.</p></div>
+    <p class="lead">Der Rahmen für alle Online-Termine. Angeboten wird nur, was zusätzlich im Google Kalender der jeweiligen Person frei ist. In dieser Testversion wirken Änderungen sofort auf die <a href="#/">Buchungsseite</a>.</p></div>
   <button type="button" class="btn-primary sm" data-act="save">Änderungen speichern</button>
 </div>
 <div class="split">
   <section class="panel" style="flex:1 1 460px;min-width:0">
     <h2>Reguläre Öffnungszeiten</h2>
-    <p class="muted" style="font-size:13px;line-height:1.5;margin:4px 0 12px">Gilt für den ganzen Salon. Eigene Arbeitszeiten pro Person kommen unter <a href="#/verwaltung/team">Team &amp; Outlook</a> dazu.</p>
+    <p class="muted" style="font-size:13px;line-height:1.5;margin:4px 0 12px">Gilt für den ganzen Salon. Eigene Arbeitszeiten pro Person kommen unter <a href="#/verwaltung/team">Team &amp; Kalender</a> dazu.</p>
     ${rows}
   </section>
   <div style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:20px">
@@ -730,14 +728,11 @@ ${U.menu ? menuHtml() : ''}
         const c = S.calendars[k] === undefined ? def : S.calendars[k];
         return `<label class="check"><input type="checkbox" data-change="cal" data-arg="${k}"${c ? ' checked' : ''}>${name}</label>`;
       }).join('');
-      const w = S.writeTo[p.id] || 'Kalender';
       return `<section class="pcard">
-  <div class="phead"><span class="avatar" style="background:${p.bg};color:${p.fg}">${p.initial}</span><div><h2>${p.name}</h2><span class="muted small">${p.role}</span></div><span class="st st-da">Verbunden</span></div>
-  <div class="acct">${ic('cal')}<div><b class="small">Outlook-Konto von ${p.name}</b><span class="muted" style="font-size:12px">Microsoft 365 · abgeglichen ${p.synced}</span></div>
-    <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Kalender trennen">Trennen</button></div>
+  <div class="phead"><span class="avatar" style="background:${p.bg};color:${p.fg}">${p.initial}</span><div><h2>${p.name}</h2><span class="muted small">${p.role}</span></div><span class="st st-da">Freigegeben</span></div>
+  <div class="acct">${ic('cal')}<div><b class="small">Buchungen ${p.name}</b><span class="muted" style="font-size:12px">im Salon-Konto · neue Buchungen landen hier und sind auf dem Handy von ${p.name} sichtbar</span></div></div>
+  <div class="acct">${ic('lock')}<div><b class="small">Eigener Kalender von ${p.name}</b><span class="muted" style="font-size:12px">freigegeben: nur frei/beschäftigt · abgeglichen ${p.synced}</span></div></div>
   <fieldset><legend>Belegt prüfen in</legend>${cals}</fieldset>
-  <div class="field"><label for="w-${p.id}" style="font-weight:700">Neue Buchungen eintragen in</label>
-    <select id="w-${p.id}" data-change="write" data-arg="${p.id}">${['Kalender', 'Salon-Termine'].map((n) => `<option${n === w ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
     <div style="display:flex;flex-direction:column;gap:2px"><span class="sublabel">Arbeitszeiten</span><span style="font-size:14px">Wie Öffnungszeiten</span></div>
     <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Eigene Arbeitszeiten">Anpassen</button>
@@ -748,9 +743,9 @@ ${U.menu ? menuHtml() : ''}
     };
     const pending = `<section class="pcard">
   <div class="phead"><span class="avatar" style="background:#FCEBD9;color:#7A4B00">+</span><div><h2>Neue Kollegin</h2><span class="muted small">Beispiel für eine offene Einladung</span></div><span class="st st-weg">Einladung offen</span></div>
-  <div class="note warn">${ic('info')}<div><span>Der Outlook-Kalender ist noch nicht verbunden. Bis dahin ist diese Person online nicht buchbar.</span><span style="font-size:12px">Einladung per E-Mail gesendet</span></div></div>
+  <div class="note warn">${ic('info')}<div><span>Ihr Buchungskalender ist angelegt, der eigene Kalender aber noch nicht für das Salon-Konto freigegeben. Bis dahin ist diese Person online nicht buchbar.</span><span style="font-size:12px">Anleitung zur Freigabe per E-Mail gesendet</span></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button type="button" class="btn-outline" data-act="soon" data-arg="Einladung erneut senden">Einladung erneut senden</button>
+    <button type="button" class="btn-outline" data-act="soon" data-arg="Anleitung erneut senden">Anleitung erneut senden</button>
     <button type="button" class="btn-text" data-act="soon" data-arg="Link kopieren">Link kopieren</button>
   </div>
   <div><span class="sublabel">Leistungen</span><div class="svc-chips"><span>Damen</span><span>Kinder &amp; Jugend</span></div></div>
@@ -758,22 +753,27 @@ ${U.menu ? menuHtml() : ''}
     const blockers = BLOCKERS.map(([k, label]) => `<label class="check"><input type="checkbox" data-change="blocker" data-arg="${k}"${S.blockers[k] ? ' checked' : ''}>${label}</label>`).join('');
     const step = (n, title, text) => `<div class="step"><span class="step-n">${n}</span><div><b style="font-size:14px">${title}</b><span>${text}</span></div></div>`;
     return `<div class="pagehead">
-  <div><h1>Team &amp; Outlook-Kalender</h1><p class="lead">Jede Person verbindet ihren eigenen Outlook-Kalender. Wir sehen nur, wann jemand belegt ist, nicht was eingetragen ist.</p></div>
+  <div><h1>Team &amp; Google Kalender</h1><p class="lead">Die Buchungsseite ist mit einem Google-Konto des Salons verbunden. Darin hat jede Person einen Buchungskalender, dazu gibt sie ihren eigenen Kalender als „frei/beschäftigt“ frei. Wir sehen nur, wann jemand belegt ist, nicht was eingetragen ist.</p></div>
   <button type="button" class="btn-primary sm" data-act="soon" data-arg="Person einladen">${ic('plus', 18, 2)}Person einladen</button>
 </div>
+<section class="panel">
+  <div class="acct">${ic('cal')}<div><b class="small">Google-Konto des Salons</b><span class="muted" style="font-size:12px">Einzige Verbindung zur Buchungsseite · Andrea und Pamela verbinden nichts selbst</span></div>
+    <span class="st st-da">Verbunden</span>
+    <button type="button" class="btn-text" style="font-size:13px" data-act="soon" data-arg="Salon-Konto trennen">Trennen</button></div>
+</section>
 <section class="panel steps" aria-label="So entstehen freie Termine">
   ${step(1, 'Rahmen setzen', 'Öffnungszeiten des Salons und Arbeitszeit der Person')}
-  ${step(2, 'Outlook abziehen', 'Alles, was im Kalender belegt ist, plus ' + S.rules.buffer + ' Min. Puffer')}
-  ${step(3, 'Zurückschreiben', 'Jede Buchung landet sofort als Termin im Outlook-Kalender')}
+  ${step(2, 'Kalender abziehen', 'Alles, was im Buchungskalender oder im eigenen Kalender belegt ist, plus ' + S.rules.buffer + ' Min. Puffer')}
+  ${step(3, 'Zurückschreiben', 'Jede Buchung landet sofort im Buchungskalender der Person und damit auf ihrem Handy')}
 </section>
 <div class="cards">${STAFF.map(card).join('')}${pending}</div>
 <section class="panel" style="display:flex;flex-wrap:wrap;gap:20px 40px">
   <fieldset style="flex:1 1 320px">
     <legend style="font-size:17px;color:var(--ink);margin-bottom:4px">Was blockiert einen Termin?</legend>
-    <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:8px">Maßgeblich ist, wie der Outlook-Termin angezeigt wird. Im Test sind z. B. donnerstags die Fortbildung von Andrea (Abwesend) und dienstags der Nachmittag von Pamela (Mit Vorbehalt) eingetragen.</p>
+    <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:8px">Maßgeblich ist, wie der Termin im Google Kalender eingetragen ist. Aus eigenen Kalendern, die nur als „frei/beschäftigt“ freigegeben sind, kommt allerdings nur „belegt“; dort zählt alles, was „Beschäftigt“ ist. Achtung: Ganztägige Termine wie Urlaub sind in Google standardmäßig „Verfügbar“, bitte als „Beschäftigt“ eintragen. Im Test sind z. B. donnerstags die Fortbildung von Andrea (Abwesend) und dienstags der Nachmittag von Pamela (Vielleicht) eingetragen.</p>
     ${blockers}
   </fieldset>
-  <div class="note" style="flex:1 1 320px;align-self:flex-start">${ic('shield', 22)}<div><b style="font-size:14px">Datenschutz</b><span>Gelesen wird nur „frei“ oder „belegt“. Betreff, Ort, Teilnehmer und Inhalte privater Termine werden weder angezeigt noch gespeichert.</span></div></div>
+  <div class="note" style="flex:1 1 320px;align-self:flex-start">${ic('shield', 22)}<div><b style="font-size:14px">Datenschutz</b><span>Gelesen wird nur „frei“ oder „belegt“. Die eigenen Kalender sind nur als „frei/beschäftigt“ freigegeben, das Salon-Konto sieht Titel, Ort, Teilnehmer und Inhalte privater Termine also gar nicht.</span></div></div>
 </section>`;
   }
 
@@ -785,7 +785,7 @@ ${U.menu ? menuHtml() : ''}
   };
   const TITLES = {
     '': 'Online-Termin', termin: 'Termin wählen', buchen: 'Buchung abschließen', bestaetigt: 'Termin gebucht', meine: 'Meine Termine',
-    verwaltung: 'Verwaltung · Kalender', 'verwaltung/oeffnungszeiten': 'Verwaltung · Öffnungszeiten', 'verwaltung/team': 'Verwaltung · Team & Outlook',
+    verwaltung: 'Verwaltung · Kalender', 'verwaltung/oeffnungszeiten': 'Verwaltung · Öffnungszeiten', 'verwaltung/team': 'Verwaltung · Team & Kalender',
   };
   const route = () => location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
   let lastRoute = null;
@@ -953,7 +953,6 @@ ${U.menu ? menuHtml() : ''}
     'day-to': (wd, el) => setTime(wd, 'to', el),
     rule: (k, el) => { S.rules[k] = /^\d+$/.test(el.value) ? Number(el.value) : el.value; save(); rerender(); },
     cal: (k, el) => { S.calendars[k] = el.checked; save(); },
-    write: (k, el) => { S.writeTo[k] = el.value; save(); },
     blocker: (k, el) => {
       S.blockers[k] = el.checked;
       save();

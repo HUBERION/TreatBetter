@@ -1,0 +1,9 @@
+# Online-Buchung: interne Ordner und Dateien sperren
+RedirectMatch 404 ^/termin/(lib|tests)(/|$)
+RedirectMatch 404 /termin/.*\.(md|json|lock|log)$
+
+<IfModule mod_headers.c>
+  <FilesMatch "^api\.php$">
+    Header set Cache-Control "no-store"
+  </FilesMatch>
+</IfModule>

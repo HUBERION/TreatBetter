@@ -3,7 +3,7 @@
 Online-Terminbuchung für Friseure, ähnlich wie Treatwell, aber für einen einzelnen Salon:
 
 - Der Salon legt allgemeine Öffnungszeiten fest.
-- Freie Termine werden mit den Outlook-Kalendern der Mitarbeiter:innen abgeglichen (ähnlich wie Calendly).
+- Freie Termine werden mit den Google Kalendern der Mitarbeiter:innen abgeglichen (ähnlich wie Calendly), also mit dem Kalender, den sie am Handy nutzen.
 - Gebucht wird verbindlich, bezahlt wird nur vor Ort.
 
 ## Mitarbeit
@@ -19,8 +19,8 @@ Online-Terminbuchung für Friseure, ähnlich wie Treatwell, aber für einen einz
 **https://huberion.github.io/TreatBetter/docs/** (nach dem Umstellen der Pages-Quelle auf `/docs` direkt unter https://huberion.github.io/TreatBetter/)
 
 - Kundenseite: Leistung wählen, Person und Uhrzeit wählen, als Gast buchen (Bezahlung nur vor Ort), Bestätigung mit Kalender-Download.
-- Verwaltung über das Menü oben rechts: Tageskalender, Öffnungszeiten & Regeln, Team & Outlook.
-- Testbuchungen erscheinen sofort im Verwaltungskalender. Geänderte Öffnungszeiten, Regeln und Outlook-Einstellungen wirken sofort auf die freien Termine.
+- Verwaltung über das Menü oben rechts: Tageskalender, Öffnungszeiten & Regeln, Team & Kalender.
+- Testbuchungen erscheinen sofort im Verwaltungskalender. Geänderte Öffnungszeiten, Regeln und Kalender-Einstellungen wirken sofort auf die freien Termine.
 - Alles läuft nur im Browser und wird im `localStorage` gespeichert. Es wird nichts verschickt. „Testdaten zurücksetzen“ im gelben Band stellt den Ausgangszustand wieder her.
 - Die Seite ist mit `noindex` markiert, damit Suchmaschinen sie nicht aufnehmen.
 
@@ -56,9 +56,11 @@ Ansehen: https://claude.ai/artifact/V2vcPDKFz1K5Senyg39XJn (privat, muss über d
 
 ```
 frei = Öffnungszeiten ∩ Arbeitszeit der Person
-       − belegte Zeiten aus Outlook (Free/Busy)
+       − belegte Zeiten aus dem Google Kalender (nur frei/belegt)
        − Puffer nach jedem Termin
        − Vorlaufzeit
 ```
 
-Geplante Anbindung: Microsoft Graph `getSchedule` für Frei/Belegt, Change Notifications für Änderungen. Jede Buchung wird als Termin in den Outlook-Kalender der Person geschrieben.
+Geplante Anbindung: Google Calendar API, Push Notifications für Änderungen. Jede Buchung wird als Termin in den Google Kalender der Person geschrieben und erscheint damit sofort am Handy. Details in [doku/roadmap.md](doku/roadmap.md).
+
+Hinweis: Das Mockup in `mockup/` stammt noch aus der Outlook-Planung.
