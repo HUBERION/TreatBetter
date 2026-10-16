@@ -85,6 +85,18 @@ file_put_contents("$daten/demo-kalender.json", json_encode(['andrea' => [], 'pam
         'extendedProperties' => ['private' => ['tb' => '1', 'quelle' => 'treatwell', 'name' => 'Max Mustermann']]],
 ]]));
 $cfg = ['modus' => 'demo', 'daten' => $daten, 'kalender' => ['andrea' => 'a', 'pamela' => 'p']];
+/* Text- und HTML-Teil unterschiedlich: fehlt im Textteil der Name, zählt die HTML-Fassung */
+$hv = file_get_contents(__DIR__ . '/treatwell/verschoben.html');
+$beide = "From: Treatwell <noreply@treatwell.at>\r\nSubject: =?UTF-8?B?" . base64_encode($bv) . "?=\r\nMessage-ID: <test-beide@treatwell.at>\r\n"
+    . "MIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"xyz\"\r\n\r\n"
+    . "--xyz\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" . preg_replace('/Gastname.*/u', '', $tv) . "\r\n"
+    . "--xyz\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($hv)) . "--xyz--\r\n";
+$m = mailText($beide);
+pruefe('Textteil allein: Name fehlt', in_array('Kundenname', treatwellLesen($m['betreff'], $m['text'])['fehlt'], true), true);
+$e = treatwellAusMail($m);
+pruefe('mit HTML-Fassung: nichts fehlt', $e['fehlt'], []);
+pruefe('mit HTML-Fassung: Name', $e['name'] !== '', true);
+
 $z = twZustand($cfg);
 
 pruefe('Buchung 1 schon von Hand eingetragen: nur verknüpft', twAnwenden($cfg, treatwellLesen($b1, $t1), $b1, $z), 'verknüpft (schon von Hand eingetragen)');

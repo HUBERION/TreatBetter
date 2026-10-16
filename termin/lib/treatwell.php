@@ -153,6 +153,19 @@ function twTerminFinden(array $cfg, string $nr): ?array
     return null;
 }
 
+/* Treatwell-E-Mail auswerten. Treatwell schreibt Text- und HTML-Teil nicht immer gleich
+   (z. B. bei verschobenen Terminen): Fehlt im Textteil etwas, gilt die HTML-Fassung, wenn sie mehr hergibt. */
+function treatwellAusMail(array $mail): array
+{
+    $e = treatwellLesen($mail['betreff'], $mail['text']);
+    $html = (string) ($mail['textHtml'] ?? '');
+    if ($e['fehlt'] && $html !== '' && $html !== $mail['text']) {
+        $h = treatwellLesen($mail['betreff'], $html);
+        if (count($h['fehlt']) < count($e['fehlt'])) $e = $h + ['ausHtml' => true];
+    }
+    return $e;
+}
+
 /* Eine ausgewertete Treatwell-E-Mail anwenden. Liefert einen kurzen Text fürs Protokoll. */
 function twAnwenden(array $cfg, array $e, string $betreff, array &$z): string
 {
@@ -252,7 +265,7 @@ function treatwellAbrufen(array $cfg): array
             if (isset($z['verarbeitet'][$mail['id']])) continue;
             if (!str_contains(mb_strtolower($mail['von']), 'treatwell')) continue;
             try {
-                $e = treatwellLesen($mail['betreff'], $mail['text']);
+                $e = treatwellAusMail($mail);
                 $ergebnis = twAnwenden($cfg, $e, $mail['betreff'], $z);
             } catch (KalenderFehler $ex) {
                 // Später noch einmal versuchen: nicht als verarbeitet merken
@@ -260,7 +273,7 @@ function treatwellAbrufen(array $cfg): array
                 continue;
             }
             $z['verarbeitet'][$mail['id']] = ['zeit' => time(), 'nr' => $e['nr'], 'ergebnis' => $ergebnis];
-            $protokoll[] = "{$mail['betreff']}: $ergebnis";
+            $protokoll[] = "{$mail['betreff']}: $ergebnis" . (!empty($e['ausHtml']) ? ' (aus der HTML-Fassung gelesen)' : '');
             if ($ergebnis !== 'übersprungen (keine Buchungs-E-Mail)') $neu++;
         }
         $imap->abmelden();

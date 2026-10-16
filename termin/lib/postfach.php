@@ -117,7 +117,7 @@ function mimeText(string $s): string
     return mb_decode_mimeheader($s);
 }
 
-/* Text aus einer E-Mail: bevorzugt text/plain, sonst text/html ohne Tags. */
+/* Text aus einer E-Mail: bevorzugt text/plain, sonst text/html ohne Tags. 'textHtml' ist immer die HTML-Fassung (leer, wenn es keine gibt). */
 function mailText(string $roh): array
 {
     [$kopf, $inhalt] = mimeKopf($roh);
@@ -142,19 +142,24 @@ function mailText(string $roh): array
         if (str_starts_with($typ, 'text/html') && $html === null) $html = $inhalt;
     };
     $teil($kopf, $inhalt);
-    if ($plain === null && $html !== null) {
+    $aufraeumen = function (string $s): string {
+        $s = preg_replace("/[ \t\x{00A0}]+/u", ' ', $s);
+        return trim(preg_replace("/\n\s*\n+/", "\n", str_replace("\r", '', $s)));
+    };
+    $ausHtml = '';
+    if ($html !== null) {
         $t = preg_replace('#<(style|script)[^>]*>.*?</\1>#si', '', $html);
         $t = preg_replace('#<(br|/p|/div|/tr|/h\d|/li)[^>]*>#i', "\n", $t);
         $t = preg_replace('#</t[dh]>#i', ' ', $t);
-        $plain = html_entity_decode(strip_tags($t), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ausHtml = $aufraeumen(html_entity_decode(strip_tags($t), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
-    $text = preg_replace("/[ \t\x{00A0}]+/u", ' ', (string) $plain);
-    $text = preg_replace("/\n\s*\n+/", "\n", str_replace("\r", '', $text));
     return [
         'betreff' => mimeText($kopf['subject'] ?? ''),
         'von' => mimeText($kopf['from'] ?? ''),
         'datum' => strtotime($kopf['date'] ?? '') ?: time(),
         'id' => trim($kopf['message-id'] ?? '', '<> ') ?: md5($roh),
-        'text' => trim($text),
+        'text' => $plain !== null ? $aufraeumen($plain) : $ausHtml,
+        // Zweite Fassung aus dem HTML-Teil, falls im Textteil etwas fehlt oder anders aufgebaut ist
+        'textHtml' => $ausHtml,
     ];
 }
