@@ -228,7 +228,7 @@
     const t = U.gebucht;
     if (!t) { location.replace('#/'); return ''; }
     return `${head()}
-<div class="done">
+<div class="done done-ok">
   <span class="done-icon">${ic('check', 36, 2.2)}</span>
   <h1>Termin gebucht!</h1>
   <p>Wir haben dir eine Bestätigung an <b>${esc(t.mail)}</b> geschickt. Darin findest du auch den Link, falls du absagen musst.</p>
@@ -244,7 +244,7 @@ ${terminDetails(t)}
     const S = U.storno;
     if (S.fertig) {
       return `${head()}
-<div class="done">
+<div class="done done-ok">
   <span class="done-icon">${ic('check', 36, 2.2)}</span>
   <h1>Termin abgesagt</h1>
   <p>Dein Termin ist abgesagt. Du bekommst noch eine kurze Bestätigung per E-Mail.</p>
