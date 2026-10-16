@@ -127,6 +127,9 @@ p { margin: 0; }
 .plan { margin: 20px 0 0; max-width: 420px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
 .plan svg { display: block; width: 100%; height: auto; font-family: var(--sans); }
 .plan figcaption { margin-top: 6px; color: var(--muted); font-size: 13px; }
+.salonfoto { margin: 40px 0 0; }
+.salonfoto img { display: block; width: 100%; height: auto; border-radius: var(--radius); box-shadow: var(--shadow); }
+.salonfoto figcaption { margin-top: 8px; color: var(--muted); font-size: 14px; text-align: center; }
 .contact-list a { font-size: 20px; font-weight: 700; text-decoration: none; padding: 6px 0; }
 
 /* ---------- Abschluss ---------- */
