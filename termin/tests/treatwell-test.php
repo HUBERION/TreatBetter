@@ -131,7 +131,14 @@ pruefe('… mit Hinweis, alten Termin zu prüfen', count($z['hinweise']) > $vorh
 pruefe('… Paketname als eigene Tätigkeit', twTerminFinden($cfg, 'T2192396359')['termin']['extendedProperties']['private']['taetigkeit'] ?? null, 'Paket - Ansatzfarbe, Waschen, Pflege, Schneiden & Föhnen');
 
 // Stornierung
-pruefe('Stornierung löscht den Termin', twAnwenden($cfg, treatwellLesen('Stornierte Treatwell Buchung (Unsere Ref. T2195121742)', ''), 'Storno', $z), 'storniert');
+// Echte Storno-E-Mail: Betreff nur „STORNIERUNG“, Nummer als „Bestellreferenz:“ im Text
+$ts = file_get_contents(__DIR__ . '/treatwell/storno.txt');
+foreach (['Text' => $ts, 'HTML' => mailText(alsMail('STORNIERUNG', file_get_contents(__DIR__ . '/treatwell/storno.html')))['text']] as $weg => $x) {
+    $e = treatwellLesen('STORNIERUNG', $x);
+    pruefe("$weg Storno: Art", $e['art'], 'storno');
+    pruefe("$weg Storno: Bestellnummer", $e['nr'], 'T2190000077');
+}
+pruefe('Stornierung löscht den Termin', twAnwenden($cfg, treatwellLesen('STORNIERUNG', str_replace('T2190000077', 'T2195121742', $ts)), 'STORNIERUNG', $z), 'storniert');
 pruefe('… Termin ist weg', twTerminFinden($cfg, 'T2195121742'), null);
 pruefe('Stornierung unbekannter Buchung: Hinweis', twAnwenden($cfg, treatwellLesen('Stornierte Treatwell Buchung (Unsere Ref. T2100000000)', ''), 'Storno', $z), 'Hinweis');
 

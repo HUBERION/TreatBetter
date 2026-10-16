@@ -55,7 +55,8 @@ function twDauer(string $s): int
 function treatwellLesen(string $betreff, string $text): array
 {
     $flach = trim(preg_replace('/\s+/u', ' ', $text));
-    $nr = preg_match('/Bestellnr\.?\s*(T\d{6,})/i', $flach, $m) || preg_match('/Ref\.?\s*(T\d{6,})/i', $betreff . ' ' . $flach, $m) ? $m[1] : '';
+    // „Bestellnr. T…“ (Buchung, Verschiebung), „Bestellreferenz: T…“ bzw. „Bestellnummer T…“ (Stornierung, Betreff nur „STORNIERUNG“)
+    $nr = preg_match('/(?:Bestellnr\.?|Bestellnummer|Bestellreferenz:?)\s*(T\d{6,})/i', $flach, $m) || preg_match('/Ref\.?\s*(T\d{6,})/i', $betreff . ' ' . $flach, $m) ? $m[1] : '';
     $b = mb_strtolower($betreff);
     $art = str_contains($b, 'storn') || str_contains($b, 'abgesagt') || str_contains($b, 'cancel') ? 'storno'
         : (preg_match('/(geändert|änderung|umgebucht|verschoben|neuer termin)/u', $b) ? 'aenderung'
