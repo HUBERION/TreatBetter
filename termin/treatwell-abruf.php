@@ -32,6 +32,7 @@ if ($web) {
 if (isset($_GET['pruefen']) || in_array('--pruefen', $argv ?? [], true)) {
     $pf = $cfg['postfach'] ?? [];
     if (empty($pf['passwort'])) { echo "Treatwell-Abruf ist aus.\n"; exit(0); }
+    echo 'PHP-Version auf dem Server: ' . PHP_VERSION . "\n";
     echo 'Programmstand: ' . (function_exists('treatwellAusMail') ? 'neu (mit HTML-Fassung)' : 'alt') . "\n";
     $imap = new Imap($pf['host'] ?? 'imap.ionos.de', (int) ($pf['port'] ?? 993));
     $imap->anmelden($pf['benutzer'] ?? SALON['mail'], $pf['passwort']);
